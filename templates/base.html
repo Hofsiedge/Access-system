@@ -1,0 +1,51 @@
+{% extends "bootstrap/base.html" %}
+<head>
+{% block head %}
+    {{ super() }}
+    <title>{% block title %}Название - {% endblock %}</title>
+{% endblock %}
+</head>
+
+<h1>Здесь будет название</h1>
+<div class=metanav>
+{% if 'username' in session %}
+    <form action="{{ url_for('logout') }}">
+        <input type=submit value="Выход">
+    </form>
+{% else %}
+    <form action="{{ url_for('login') }}">
+        <input type=submit value="Вход">
+    </form>
+{% endif %}
+</div>
+{% for message in get_flashed_messages() %}
+    <div class=flash>{{ message }}</div>
+{% endfor %}
+{% block navbar %}
+<div class="navbar navbar-inverse" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+             <a class="navbar-brand" href="/">Название</a>
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li>
+                    <a href="{{url_for('show_table')}}">Таблица посещения</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% block page_content %}{% endblock %}
+</div>
+{% endblock %}
