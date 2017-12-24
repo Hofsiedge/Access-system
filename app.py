@@ -5,7 +5,6 @@ from time import sleep
 from flask import Flask, render_template, redirect, url_for, session, flash
 from flask_bootstrap import Bootstrap
 from flask_script import Manager
-from flask_moment import Moment
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField
 from wtforms.validators import Required, Email
@@ -19,7 +18,6 @@ app = Flask(__name__)
 app.config.from_object('config')
 
 bootstrap = Bootstrap(app)
-moment = Moment(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 manager = Manager(app)
@@ -45,6 +43,8 @@ class User(db.Model):
     patronymic = db.Column(db.String(64))
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     day = db.relationship('Day', backref='user', lazy='dynamic')
+    pupil = db.relationship('Pupil_info', backref='user', lazy='dynamic')
+    form = db.relationship('Class', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return self.username
@@ -58,6 +58,35 @@ class Day(db.Model):
 
     def __repr__(self):
         return ' - '.join([str(self.user.id), str(self.time)])
+
+
+class Pupil_info(db.Model):
+    __tablename__ = 'pupil_info'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    form_cypher = db.Column(db.SmallInteger, db.ForeignKey('classes.id'))
+    #form = db.Column(db.SmallInteger)
+    #liter = db.Column(db.String(1))
+
+    def __repr__(self):
+        return ' '.join(map(str, [self.user, self.form.form, self.form.liter]))
+
+
+class Class(db.Model):
+    __tablename__ = 'classes'
+    id = db.Column(db.Integer, primary_key=True)
+    form = db.Column(db.SmallInteger)
+    liter = db.Column(db.String(1))
+    form_master = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    pupils = db.relationship('Pupil_info', backref='form', lazy='dynamic')
+    
+    def __repr__(self):
+        return ' '.join(map(str, [self.form, self.liter, self.user]))
+    
+
+def connect_pupil_info(user, form):
+    db.session.add(Pupil_info(user=user, form=form, liter=liter))
+    db.session.commit()
 
 def save_changes():
     migrate()
@@ -79,6 +108,7 @@ def create_user(username, name, surname, patronymic, role):
 # TODO: Сделать вариант сайта для админов
 # TODO: Добавить в .vimrc навигацию в режиме вставки
 
+
 class RegistrationForm(FlaskForm):
     name = StringField('Имя', validators=[Required()])
     surname = StringField('Фамилия', validators=[Required()])
@@ -93,32 +123,48 @@ class RegistrationForm(FlaskForm):
 #class Hist(db.Model):
 #    pass
 
-#db.drop_all()
+db.drop_all()
 db.create_all()
 
+#connect_pupil_info(User.query.filter_by(id=1).first(), 10, 'A')
 
-print(os.path.abspath(os.path.dirname(__file__)))
+#print(os.path.abspath(os.path.dirname(__file__)))
+
+#admin = Role.query.filter_by(name='Admin').first()
+#teacher = Role.query.filter_by(name='Teacher').first()
+#pupil = Role.query.filter_by(name='Pupil').first()
+#parent = Role.query.filter_by(name='Parent').first()
+
 admin = Role(name='Admin')
 teacher = Role(name='Teacher')
 pupil = Role(name='Pupil')
 parent = Role(name='Parent')
 
-#db.session.add_all([admin, teacher, pupil, parent])
+create_user('vasya_pupkin1', 'Вася', 'Пупкин', 'Алексеевич', teacher)
+create_user('vasya_pupkin2', 'Вася', 'Пупкин', 'Алексеевич', teacher)
+create_user('vasya_pupkin3', 'Вася', 'Пупкин', 'Алексеевич', teacher)
+create_user('vasya_pupkin4', 'Вася', 'Пупкин', 'Алексеевич', teacher)
+create_user('vasya_pupkin5', 'Вася', 'Пупкин', 'Алексеевич', teacher)
+
+db.session.add_all([admin, teacher, pupil, parent])
 db.session.commit()
 
-#create_user('vasya_pupkin', pupil)
-#create_user('vasya_ne_pupkin', pupil)
-#create_user('12345', teacher)
-#save_pass(1)
-#save_pass(2)
-#save_pass(3)
-#create_user('pupil1', pupil)
-#save_pass(4)
-#save_pass(1)
+class10A = Class(form=10, liter='A', user=User.query.filter_by(id=1).first())
+class10B = Class(form=10, liter='Б', user=User.query.filter_by(id=2).first())
+class10C = Class(form=10, liter='В', user=User.query.filter_by(id=3).first())
+class11A = Class(form=11, liter='A', user=User.query.filter_by(id=4).first())
+class11B = Class(form=11, liter='Б', user=User.query.filter_by(id=5).first())
+db.session.add(class10A)
+db.session.commit()
 
+
+#save_pass(3)
+#
 print(Role.query.all())
 print(User.query.all())
 print(Day.query.all())
+print(Pupil_info.query.all())
+print(Class.query.all())
 
 
 @app.route('/', methods=['GET', 'POST'])
