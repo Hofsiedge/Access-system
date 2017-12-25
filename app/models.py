@@ -25,6 +25,7 @@ class User(db.Model):
     day = db.relationship('Day', backref='user', lazy='dynamic')
     pupil = db.relationship('Pupil_info', backref='user', lazy='dynamic')
     form = db.relationship('Class', backref='user', lazy='dynamic')
+    parent = db.relationship('Parent', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return self.username
@@ -45,6 +46,7 @@ class Pupil_info(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     form_id = db.Column(db.SmallInteger, db.ForeignKey('classes.id'))
+    parent_id = db.Column(db.Integer, db.ForeignKey('parents.id'))
     #form = db.Column(db.SmallInteger)
     #liter = db.Column(db.String(1))
 
@@ -64,9 +66,18 @@ class Class(db.Model):
         return ' '.join(map(str, [self.form, self.liter, self.user]))
     
 
-#class Parent_info(db.Model):
+class Parent(db.Model):
     #TODO: Complete
-    #pass
+   __tablename__ = 'parents' 
+   id = db.Column(db.Integer, primary_key=True)
+   user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+   pupils = db.relationship('Pupil_info', backref='parent')
+
+
+def create_parent(user_parent, pupil):
+    pupil.parent_id = user_parent.id
+    db.session.add_all([Parent(user=user_parent), pupil])
+    db.session.commit()
 
 def connect_pupil_info(user, form):
     db.session.add(Pupil_info(user=user, form=form))

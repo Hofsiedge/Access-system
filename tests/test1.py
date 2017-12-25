@@ -1,7 +1,9 @@
 import unittest
 from flask import current_app
 from app import create_app, db
-from app.models import Role, User, Class, create_user, save_pass
+from app.models import Role, User, Class, Parent, Pupil_info, \
+        create_user, save_pass, create_parent, connect_pupil_info
+
 
 class BasicTestCase(unittest.TestCase):
     def setUp(self):
@@ -40,7 +42,12 @@ class BasicTestCase(unittest.TestCase):
         class10A = Class(form=10, liter='A', user=User.query.filter_by(id=1).first())
         
     def test_pass(self):
-        create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич',
-                    Role.query.filter_by(name='Teacher').first())
+        create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич', None)
         save_pass(User.query.filter_by(username='vasya_pupkin').first().id)
 
+    def test_parent_creattion(self):
+        create_user('parent_1', 'Вася', 'Пупкин', 'Алексеевич', None)
+        create_user('pupil_1', 'Вася', 'Пупкин', 'Алексеевич', None)
+        connect_pupil_info(User.query.filter_by(id=2).first(), None)
+        create_parent(User.query.filter_by(id=1).first(), Pupil_info.query.filter_by(id=1).first())
+        #print(Pupil_info.query.filter_by(id=1).first().parent)
