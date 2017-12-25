@@ -57,7 +57,7 @@ class Day(db.Model):
     time = db.Column(db.Time())
 
     def __repr__(self):
-        return ' - '.join([str(self.user.id), str(self.time)])
+        return ' - '.join([str(self.user), str(self.time)])
 
 
 class Pupil_info(db.Model):
@@ -84,8 +84,13 @@ class Class(db.Model):
         return ' '.join(map(str, [self.form, self.liter, self.user]))
     
 
+class Parent_info(db.Model):
+    #TODO: Complete
+    pass
+
+
 def connect_pupil_info(user, form):
-    db.session.add(Pupil_info(user=user, form=form, liter=liter))
+    db.session.add(Pupil_info(user=user, form=form))
     db.session.commit()
 
 def save_changes():
@@ -126,7 +131,6 @@ class RegistrationForm(FlaskForm):
 db.drop_all()
 db.create_all()
 
-#connect_pupil_info(User.query.filter_by(id=1).first(), 10, 'A')
 
 #print(os.path.abspath(os.path.dirname(__file__)))
 
@@ -154,12 +158,14 @@ class10B = Class(form=10, liter='Б', user=User.query.filter_by(id=2).first())
 class10C = Class(form=10, liter='В', user=User.query.filter_by(id=3).first())
 class11A = Class(form=11, liter='A', user=User.query.filter_by(id=4).first())
 class11B = Class(form=11, liter='Б', user=User.query.filter_by(id=5).first())
+connect_pupil_info(User.query.filter_by(id=1).first(), class11A)
+
 db.session.add(class10A)
 db.session.commit()
 
 
-#save_pass(3)
-#
+save_pass(3)
+
 print(Role.query.all())
 print(User.query.all())
 print(Day.query.all())
