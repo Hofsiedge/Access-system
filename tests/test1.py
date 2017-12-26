@@ -45,9 +45,16 @@ class BasicTestCase(unittest.TestCase):
         create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич', None)
         save_pass(User.query.filter_by(username='vasya_pupkin').first().id)
 
-    def test_parent_creattion(self):
+    def test_parent_creation(self):
         create_user('parent_1', 'Вася', 'Пупкин', 'Алексеевич', None)
-        create_user('pupil_1', 'Вася', 'Пупкин', 'Алексеевич', None)
-        connect_pupil_info(User.query.filter_by(id=2).first(), None)
-        create_parent(User.query.filter_by(id=1).first(), Pupil_info.query.filter_by(id=1).first())
-        #print(Pupil_info.query.filter_by(id=1).first().parent)
+        class10A = Class(form=10, liter='A', user=User.query.filter_by(id=1).first())
+        pupil = Role(name='Pupil')
+        db.session.add(class10A, pupil)
+        db.session.commit()
+        create_user('pupil_1', 'Вася', 'Пупкин', 'Алексеевич', pupil)
+        connect_pupil_info(User.query.filter_by(id=2).first(), class10A)
+        create_parent(User.query.filter_by(id=1).first(),
+                      Pupil_info.query.filter_by(id=1).first())
+        assert Pupil_info.query.filter_by(id=1).first().parent.id == 1
+        assert Parent.query.filter_by(user_id=1).first().pupils[0] == \
+                Pupil_info.query.filter_by(id=1).first()

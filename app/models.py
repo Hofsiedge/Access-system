@@ -2,6 +2,8 @@ import flask_sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
 from . import db 
 from datetime import datetime
+import re
+import sqlite3
 
 
 class Role(db.Model):
@@ -39,6 +41,65 @@ class Day(db.Model):
 
     def __repr__(self):
         return ' - '.join([str(self.user), str(self.time)])
+    
+
+#class History(db.Model):
+    #__tablename__ = 'history'
+    #id = db.Column(db.Integer, primary_key = True)
+    #user_id = db.Column(db.Integer, unique=True)
+    #separate columns for each day are to create by save_day function
+
+
+#def save_day():
+    #users = Day.query.all()
+    #History.
+    #for user in users:
+        
+def save_day():
+    con = sqlite3.connection('history.sqlite')
+    cur = con.cursor()
+    cur.execute("""SELECT name FROM sqlite_master"
+                WHERE type='table' AND name='history';""")
+
+    users = [i.id for i in User.query.all()]
+
+    if not cur.fetchall():
+        cur.execute("""CREATE TABLE history 
+                    (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    user_id INTEGER UNIQUE;""")
+        for i in range(len(users)):
+            cur.execute('INSERT INTO history VALUES (NULL, ?);', (i,))
+        con.commit()
+    
+    day = Day.query.all()
+    pre_history = {}
+
+    for i in users:
+        pre_history[i] = []
+
+    for i in day:
+        pre_history[i.user_id].append(i.time)
+
+    for i in range(len(pre_history)):
+        #Здесь хранится время пребывания в лицее
+        if len(pre_history[i])%2 != 0:
+            print('Кто-то не покинул лицей или не отметил уход')
+        for q in range(pre_history[i]//2):
+            pre_history[i][q:q+1] = str(pre_history[i][q+1]-pre_history[i][q])
+            #TODO: Заменить pre_history[i] на интересующие результаты
+
+    for i in pre_history.keys:
+        if not pre_history[i]:
+            del pre_history[i]
+
+    current_date = '.'.join(map(str, datetime.datetime.now().timetuple()[2::-1]))
+
+    cur.execute("ALTER TABLE history ADD COLUMN ? TEXT;",
+                (current_date, ))
+    for i in pre_history.keys:
+        cur.execute("UPDATE history SET ?=? WHERE user_id=?;", 
+                    (current_date, pre_history[i], i))
+#TODO: Maybe it's reasonable to split this function on save_day and process_day
 
 
 class Pupil_info(db.Model):
@@ -47,8 +108,6 @@ class Pupil_info(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     form_id = db.Column(db.SmallInteger, db.ForeignKey('classes.id'))
     parent_id = db.Column(db.Integer, db.ForeignKey('parents.id'))
-    #form = db.Column(db.SmallInteger)
-    #liter = db.Column(db.String(1))
 
     def __repr__(self):
         return ' '.join(map(str, [self.user, self.form.form, self.form.liter]))
@@ -67,7 +126,6 @@ class Class(db.Model):
     
 
 class Parent(db.Model):
-    #TODO: Complete
    __tablename__ = 'parents' 
    id = db.Column(db.Integer, primary_key=True)
    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
