@@ -1,12 +1,12 @@
 import flask_sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
 from . import db 
-from datetime import datetime
-import re
+from datetime import datetime, timedelta
 import sqlite3
 
 
 class Role(db.Model):
+    """ Class, representing the Role model (teacher, parent etc)"""
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
@@ -17,6 +17,7 @@ class Role(db.Model):
 
 
 class User(db.Model):
+    """ Class, representing the User model """
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True)
@@ -34,6 +35,10 @@ class User(db.Model):
 
 
 class Day(db.Model):
+    """
+    Class, representing the Day model
+    The Day table contains passings for each user
+    """
     __tablename__ = 'day'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -43,66 +48,9 @@ class Day(db.Model):
         return ' - '.join([str(self.user), str(self.time)])
     
 
-#class History(db.Model):
-    #__tablename__ = 'history'
-    #id = db.Column(db.Integer, primary_key = True)
-    #user_id = db.Column(db.Integer, unique=True)
-    #separate columns for each day are to create by save_day function
-
-
-#def save_day():
-    #users = Day.query.all()
-    #History.
-    #for user in users:
-        
-def save_day():
-    con = sqlite3.connection('history.sqlite')
-    cur = con.cursor()
-    cur.execute("""SELECT name FROM sqlite_master"
-                WHERE type='table' AND name='history';""")
-
-    users = [i.id for i in User.query.all()]
-
-    if not cur.fetchall():
-        cur.execute("""CREATE TABLE history 
-                    (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    user_id INTEGER UNIQUE;""")
-        for i in range(len(users)):
-            cur.execute('INSERT INTO history VALUES (NULL, ?);', (i,))
-        con.commit()
-    
-    day = Day.query.all()
-    pre_history = {}
-
-    for i in users:
-        pre_history[i] = []
-
-    for i in day:
-        pre_history[i.user_id].append(i.time)
-
-    for i in range(len(pre_history)):
-        #Здесь хранится время пребывания в лицее
-        if len(pre_history[i])%2 != 0:
-            print('Кто-то не покинул лицей или не отметил уход')
-        for q in range(pre_history[i]//2):
-            pre_history[i][q:q+1] = str(pre_history[i][q+1]-pre_history[i][q])
-            #TODO: Заменить pre_history[i] на интересующие результаты
-
-    for i in pre_history.keys:
-        if not pre_history[i]:
-            del pre_history[i]
-
-    current_date = '.'.join(map(str, datetime.datetime.now().timetuple()[2::-1]))
-
-    cur.execute("ALTER TABLE history ADD COLUMN ? TEXT;",
-                (current_date, ))
-    for i in pre_history.keys:
-        cur.execute("UPDATE history SET ?=? WHERE user_id=?;", 
-                    (current_date, pre_history[i], i))
-#TODO: Maybe it's reasonable to split this function on save_day and process_day
-
 
 class Pupil_info(db.Model):
+    """ Class, representing the Pupil_info model """
     __tablename__ = 'pupil_info'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -114,6 +62,7 @@ class Pupil_info(db.Model):
 
 
 class Class(db.Model):
+    """ Class, representing the Class model """
     __tablename__ = 'classes'
     id = db.Column(db.Integer, primary_key=True)
     form = db.Column(db.SmallInteger)
@@ -126,26 +75,116 @@ class Class(db.Model):
     
 
 class Parent(db.Model):
-   __tablename__ = 'parents' 
-   id = db.Column(db.Integer, primary_key=True)
-   user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-   pupils = db.relationship('Pupil_info', backref='parent')
+    """ Class, representing the Parent model """
+    __tablename__ = 'parents' 
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    pupils = db.relationship('Pupil_info', backref='parent')
 
+
+# TODO: Transactions
+def process_day(users, day):
+
+    """
+    Process the day, return a dict with necessary information
+    (first and last passing time, total time inside)
+    """
+
+    A = {} # dict for the time information
+
+    for user_id in users:
+        A[user_id] = []
+
+    for passing in day:
+        A[passing.user_id].append(passing.time)
+
+    for user_id in A.keys():
+
+        if A[user_id]:
+            first_passing = A[user_id][0] #save first and last passings
+            last_passing = A[user_id][-1]
+
+        if len(A[user_id]) % 2: # delete last passing,
+            del A[user_id][-1]  # if it's not paired
+
+        for passing_num in range(len(A[user_id])//2):
+            a = A[user_id][passing_num]
+            a = datetime(2000, 1, 1, a.hour, a.minute, a.second)
+            b = A[user_id][passing_num + 1]
+            b = datetime(2000, 1, 1, b.hour, b.minute, b.second)
+            A[user_id][passing_num : passing_num + 2] = [b - a]
+
+        if A[user_id]:
+            total_time = timedelta(0)
+            for time in A[user_id]:
+                total_time += time
+            A[user_id] = first_passing, last_passing, total_time
+
+    A = {user_id: A[user_id] for user_id in A.keys() if A[user_id]}
+    return A 
+
+def save_day():
+
+    """ Write the day to the history table """
+
+    users = [i.id for i in User.query.all()]
+    day = Day.query.all()
+    pre_history = process_day(users, day)
+
+    con = sqlite3.connect('history.sqlite')
+    cur = con.cursor()
+    #
+    # TODO: REMOVE WHEN END DEBUGING!!!
+    cur.execute('DROP TABLE history;')
+    #
+    cur.execute("""SELECT name FROM sqlite_master
+                WHERE type='table' AND name='history';""")
+
+    if not cur.fetchall():
+        cur.execute("""CREATE TABLE history 
+                    (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    user_id INTEGER UNIQUE);""")
+        for i in users:
+            cur.execute('INSERT INTO history VALUES (NULL, ?);', (i,))
+        con.commit()
+    
+    #current_date = 'd_' + '_'.join(map(str, datetime.now().timetuple()[2::-1]))
+    current_date = 'date_1'
+    print(current_date)
+
+    cur.execute("ALTER TABLE history ADD COLUMN %s TEXT;" % (current_date))
+
+    for i in pre_history.keys():
+        cur.execute("""UPDATE history SET 
+                    %s=? WHERE user_id=?;""" % (current_date), \
+                    (str(pre_history[i]), i))
+
+    #cur.execute('SELECT * FROM history;')
+    #print('', *cur.fetchall(), sep='\n')
+
+#TODO: fetch data from the nacessary column
+def repr_history(day, month, year):
+    """ Return history for the required date """
+
+    print('d_' + '_'.join(map(str, (day, month, year))))
+    cur = sqlite3.connect('history.sqlite').cursor()
+    #cur.execute('SELECT user_id, %s FROM history;' % ('d_' + '_'.join(map(str, (day, month, year)))))
+    cur.execute('SELECT user_id, %s FROM history;' % ('date_1'))
+    return cur.fetchall()
 
 def create_parent(user_parent, pupil):
+    """ Create a parent user """
     pupil.parent_id = user_parent.id
     db.session.add_all([Parent(user=user_parent), pupil])
     db.session.commit()
 
 def connect_pupil_info(user, form):
+    """ Attach pupil_info to the pupil """
     db.session.add(Pupil_info(user=user, form=form))
     db.session.commit()
 
 def save_pass(user_id):  
-    '''
-        Регистрирует проход
-        user_id: int
-    '''
+    """ Register passing """
     user = User.query.filter_by(id=user_id).first()
     db.session.add(Day(user=user, time=datetime.time(datetime.now())))
     db.session.commit()

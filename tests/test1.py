@@ -1,11 +1,14 @@
 import unittest
 from flask import current_app
 from app import create_app, db
-from app.models import Role, User, Class, Parent, Pupil_info, \
-        create_user, save_pass, create_parent, connect_pupil_info
+from app.models import Role, User, Class, Parent, Pupil_info, Day, \
+        create_user, save_pass, create_parent, connect_pupil_info, \
+        save_day, repr_history
+from time import sleep
 
 
 class BasicTestCase(unittest.TestCase):
+
     def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()
@@ -58,3 +61,24 @@ class BasicTestCase(unittest.TestCase):
         assert Pupil_info.query.filter_by(id=1).first().parent.id == 1
         assert Parent.query.filter_by(user_id=1).first().pupils[0] == \
                 Pupil_info.query.filter_by(id=1).first()
+
+    def test_history_update(self):
+        pupil = Role(name='Pupil')
+        create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич', pupil)
+        create_user('anatoly_123', 'Анатолий', 'Какой-то', 'Батькович', pupil)
+        save_pass(1)
+        sleep(1)
+        save_pass(2)
+        sleep(1)
+        save_pass(2)
+        sleep(1)
+        save_pass(2)
+        sleep(1)
+        save_pass(1)
+        sleep(1)
+        save_pass(2)
+        save_pass(1)
+        save_pass(2)
+        save_day()
+        print('', *repr_history(4, 1, 2018), sep='\n')
+
