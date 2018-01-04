@@ -80,5 +80,5 @@ class BasicTestCase(unittest.TestCase):
         save_pass(1)
         save_pass(2)
         save_day()
-        print('', *repr_history(4, 1, 2018), sep='\n')
+        #print('', *repr_history(4, 1, 2018), sep='\n')
 

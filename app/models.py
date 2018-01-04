@@ -48,7 +48,6 @@ class Day(db.Model):
         return ' - '.join([str(self.user), str(self.time)])
     
 
-
 class Pupil_info(db.Model):
     """ Class, representing the Pupil_info model """
     __tablename__ = 'pupil_info'
@@ -87,7 +86,7 @@ def process_day(users, day):
 
     """
     Process the day, return a dict with necessary information
-    (first and last passing time, total time inside)
+    (first and last passing time, total time inside (hours, minutes))
     """
 
     A = {} # dict for the time information
@@ -118,7 +117,9 @@ def process_day(users, day):
             total_time = timedelta(0)
             for time in A[user_id]:
                 total_time += time
-            A[user_id] = first_passing, last_passing, total_time
+            A[user_id] = first_passing, last_passing, \
+                    ':'.join(map(str, (total_time.seconds // 3600, \
+                                       total_time.seconds % 3600 // 60, total_time.seconds % 60)))
 
     A = {user_id: A[user_id] for user_id in A.keys() if A[user_id]}
     return A 
@@ -148,28 +149,44 @@ def save_day():
             cur.execute('INSERT INTO history VALUES (NULL, ?);', (i,))
         con.commit()
     
-    #current_date = 'd_' + '_'.join(map(str, datetime.now().timetuple()[2::-1]))
-    current_date = 'date_1'
-    print(current_date)
+    current_date = '_'.join(map(str, datetime.now().timetuple()[2::-1]))
 
-    cur.execute("ALTER TABLE history ADD COLUMN %s TEXT;" % (current_date))
+    cur.execute("ALTER TABLE history ADD COLUMN %s TEXT;" % ('f_' + current_date)) 
+    cur.execute("ALTER TABLE history ADD COLUMN %s TEXT;" % ('l_' + current_date)) 
+    cur.execute("ALTER TABLE history ADD COLUMN %s TEXT;" % ('t_' + current_date)) 
+    # first, last, total
 
     for i in pre_history.keys():
         cur.execute("""UPDATE history SET 
-                    %s=? WHERE user_id=?;""" % (current_date), \
-                    (str(pre_history[i]), i))
+                    %s=? WHERE user_id=?;""" % ('f_' + current_date), \
+                    (str(pre_history[i][0])[:8], i))
+        cur.execute("""UPDATE history SET 
+                    %s=? WHERE user_id=?;""" % ('l_' + current_date), \
+                    (str(pre_history[i][1])[:8], i))
+        cur.execute("""UPDATE history SET 
+                    %s=? WHERE user_id=?;""" % ('t_' + current_date), \
+                    (pre_history[i][2], i))
+    con.commit()
 
-    #cur.execute('SELECT * FROM history;')
-    #print('', *cur.fetchall(), sep='\n')
 
-#TODO: fetch data from the nacessary column
-def repr_history(day, month, year):
+def repr_history(day, month, year, column='flt'):
     """ Return history for the required date """
-
+    current_date = '_'.join(map(str, (day, month, year)))
+    f, l, t = 'f_' + current_date, 'l_' + current_date, 't_' + current_date
+    # first, last, total
     print('d_' + '_'.join(map(str, (day, month, year))))
     cur = sqlite3.connect('history.sqlite').cursor()
-    #cur.execute('SELECT user_id, %s FROM history;' % ('d_' + '_'.join(map(str, (day, month, year)))))
-    cur.execute('SELECT user_id, %s FROM history;' % ('date_1'))
+    query_list = ['user_id']
+    if 'f' in column:
+        query_list.append(f)
+    if 'l' in column:
+        query_list.append(l)
+    if 't' in column:
+        query_list.append(t)
+    cur.execute('SELECT %s FROM history;' % \
+                (', '.join(query_list)))
+    print('', *cur.fetchall(), sep='\n')
+
     return cur.fetchall()
 
 def create_parent(user_parent, pupil):

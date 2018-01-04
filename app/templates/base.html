@@ -17,18 +17,22 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-             <a class="navbar-brand" href="/">Название</a>
+             <a class="navbar-brand" href="/">Главная</a>
         </div>
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li>
-                    <a href="{{url_for('show_table')}}">Таблица посещения</a>
+                    <a href="{{url_for('.show_table')}}">Таблица посещения</a>
+                </li>
+                <li>
+                    <a href="{{url_for('.registration')}}">Регистрация</a>
                 </li>
             </ul>
 
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block content %}

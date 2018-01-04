@@ -9,6 +9,10 @@ from ..models import create_user, Role
 def index():
     return render_template('index.html')
 
+@main.route('/history', methods=['GET', 'POST'])
+def show_table():
+    return render_template('show_table.html')
+
 @main.route('/registration', methods=['POST', 'GET'])
 def registration():
     form = RegistrationForm()
