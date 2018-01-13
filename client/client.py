@@ -2,6 +2,10 @@
 
 from tkinter import Tk, Frame, Button, Text, Label, StringVar
 from socket import socket, AF_INET, SOCK_STREAM
+from math import log
+from HammingCode import HammingCodec
+from SocketFixedLen import FLSocket
+from time import sleep
 
 class App:
     
@@ -27,31 +31,24 @@ class App:
     def set_error(self):
         pass
 
-
+        
 if __name__ == '__main__':
     #root = App()
     #root.tk.mainloop()
 
-    sock = socket(AF_INET, SOCK_STREAM)
-    sock.connect(('localhost', 9092))
-    #sock.send('hello, world!'.encode('utf-8'))
-    sock.send(input().encode('utf-8'))
-    sock.shutdown(1)
+    HMCode = HammingCodec(16)
 
-    data = ''
-
-    #data = sock.recv(4096).decode('utf-8')
-    while True:
-        tmp_data = sock.recv(1024)
-        print('Temporary: ' + tmp_data.decode('utf-8'))
-        data += tmp_data.decode('utf-8')
-        if not tmp_data:
-            sock.close()
-            break
-
-    print('Data: ' + data)
-
-    #print(data.decode('utf-8'))
-
-    sock.close()
+    sock = FLSocket(3)
+    sock.connect('localhost', 9092)
+    try:
+        while True:
+            sleep(1)
+            sock.send(bytes([HMCode.get_code(i) for i in [15, 15, 15]]))
+            data = sock.recv()
+            data = bytes([HMCode.get_data(i) for i in data])
+            print('Data: ', list(data))
+    except RuntimeError as e:
+        print(e)
+    finally:
+        sock.sock.close()
 
