@@ -3,30 +3,39 @@ from time import sleep
 from _thread import start_new_thread
 from HammingCode import HammingCodec
 from SocketFixedLen import FLSocket
+from BinaryProtocol import BinaryProtocol as BP
 
+
+def send_passer_name(conn, message):
+    message = message.encode('utf-8')
+    for i in range(len(message)):
+        conn.send(bytes(divmod(BP.passing(message[i]), 256)))
+    conn.send(bytes(divmod(BP.passing(0), 256)))
 
 def threaded_client(conn):
     try:
         while True:
-            data = bytes(HMCode.get_data(i) for i in conn.recv())
-            print('Data: ', list(data))
-            conn.send(bytes([HMCode.get_code(i) for i in data]))
+            data = [BP.decode(i) for i in conn.recv()]
+            data = data[0] * 256 + data[1]
+            print('Received data:', data)
+            send_passer_name(conn, 'Хомяк')
     except RuntimeError as e:
         print(e)
+    #except Exception as e:
+        #print('Exception caught')
+        #print(e)
     finally:
         conn.close()
 
 if __name__ == '__main__':
     sock = socket(AF_INET, SOCK_STREAM)
-    sock.bind(('', 9092))
+    sock.bind(('', 9090))
     sock.listen(3)
-
-    HMCode = HammingCodec(16)
 
     while True:
         conn, addr = sock.accept()
         conn.settimeout(10)
-        conn = FLSocket(3, conn)
+        conn = FLSocket(2, conn)
         print('Connected: ', addr)
 
         start_new_thread(threaded_client, (conn,))
