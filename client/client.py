@@ -7,6 +7,7 @@ from HammingCode import HammingCodec
 from SocketFixedLen import FLSocket
 from time import sleep
 from BinaryProtocol import BinaryProtocol as BP
+from random import randint
 
 class App:
     
@@ -62,8 +63,9 @@ if __name__ == '__main__':
     sock.connect('localhost', 9090)
     try:
         while True:
+            i = randint(0, 8)
             sleep(1)
-            send_passing(sock, 15)
+            send_passing(sock, i)
             print(get_passer_name(sock))
             #data = sock.recv()
             #data = BP.decode(data[0] * 256 + data[1])

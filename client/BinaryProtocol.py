@@ -17,7 +17,6 @@ from HammingCode import HammingCodec
 
 
 HMCode = HammingCodec(16)
-print(HMCode.control_bits)
 
 class BinaryProtocol:
 

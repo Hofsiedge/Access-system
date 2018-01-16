@@ -59,7 +59,6 @@ class HammingCodec:
                         if i + 1 not in self.control_bits])
         right_code = bin(self.get_code(int(data, 2)))[2:]
         right_code = '0' * (self.MSGLEN - len(right_code)) + right_code
-
         code = list(code)
         errors = []
         for i in self.control_bits:
