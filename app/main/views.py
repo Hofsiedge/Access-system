@@ -1,8 +1,8 @@
-from flask import render_template, session, redirect, url_for
+from flask import render_template, session, redirect, url_for, request
 from . import main
 from .forms import RegistrationForm
 from .. import db
-from ..models import create_user, Role
+from ..models import create_user, Role, User, save_pass, save_day
 
 
 @main.route('/', methods=['GET', 'POST'])
@@ -25,9 +25,26 @@ def registration():
         form.surname.data = ''
         patronymic = form.patronymic.data
         form.patronymic.data = ''
-
+        #TODO: e-mail
         role = Role.query.filter_by(id=int(form.role.data)).first()
+        print(int(form.role.data), role)
         create_user(username, name, surname, patronymic, role)
         return redirect(url_for('.registration'))
     return render_template('registration.html', form=form)
 
+commands = {
+    1024: lambda: 'Connection is fine', # Test connection command
+    1365: save_day # The end of the day command
+}
+
+@main.route('/command', methods=['POST'])
+def command():
+    print(request)
+    command = int(request.form['command'])
+    if command in commands:
+        return commands[command]()
+    else:
+        #FIXME
+        save_pass(command)
+        user = User.query.filter_by(id=command).first()
+        return repr(user)

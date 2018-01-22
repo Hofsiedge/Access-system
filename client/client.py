@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 
 from tkinter import Tk, Frame, Button, Text, Label, StringVar
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR
 from math import log
 from HammingCode import HammingCodec
 from SocketFixedLen import FLSocket
@@ -40,9 +40,12 @@ def send_passing(sock, user_id):
 
 def test_connection(sock):
     sock.send(bytes(divmod(BP.test_connection(), 256)))
+    print(get_passer_name(sock))
 
 def end_the_day(sock):
     sock.send(bytes(divmod(BP.end_of_the_day(), 256)))
+    print(get_passer_name(sock))
+    sock.sock.shutdown(SHUT_RDWR)
 
 def get_passer_name(sock):
     #TODO: more efficient way to do this
@@ -62,11 +65,13 @@ if __name__ == '__main__':
     sock = FLSocket(2)
     sock.connect('localhost', 9090)
     try:
-        while True:
-            i = randint(0, 8)
+        test_connection(sock)
+        for q in range(16):
+            i = randint(1, 3)
             sleep(1)
             send_passing(sock, i)
             print(get_passer_name(sock))
+        end_the_day(sock)
             #data = sock.recv()
             #data = BP.decode(data[0] * 256 + data[1])
             #print('Data: ', data)

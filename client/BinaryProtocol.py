@@ -20,8 +20,8 @@ HMCode = HammingCodec(16)
 
 class BinaryProtocol:
 
-    codes = {1024: 'test',
-             1635: 'day_end'
+    codes = {1024: 't',
+             1635: 'e'
             }
 
     @staticmethod
@@ -30,7 +30,7 @@ class BinaryProtocol:
 
     @staticmethod
     def end_of_the_day():
-        return HMCode.get_code((1 << 10) + 1365)
+        return HMCode.get_code(1365)
 
     @staticmethod
     def passing(user_id):
@@ -39,8 +39,4 @@ class BinaryProtocol:
 
     @staticmethod
     def decode(message):
-        message = HMCode.get_data(message)
-        if message // 1024:
-            return BinaryProtocol.codes[message]
-        else:
-            return message % 1024
+        return HMCode.get_data(message)

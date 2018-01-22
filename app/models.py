@@ -31,7 +31,7 @@ class User(db.Model):
     parent = db.relationship('Parent', backref='user', lazy='dynamic')
 
     def __repr__(self):
-        return self.username
+        return ' '.join([self.name, self.surname, self.patronymic, repr(self.role)])
 
 
 class Day(db.Model):
@@ -136,7 +136,7 @@ def save_day():
     cur = con.cursor()
     #
     # TODO: REMOVE WHEN END DEBUGING!!!
-    cur.execute('DROP TABLE history;')
+    #cur.execute('DROP TABLE history;')
     #
     cur.execute("""SELECT name FROM sqlite_master
                 WHERE type='table' AND name='history';""")
@@ -167,6 +167,10 @@ def save_day():
                     %s=? WHERE user_id=?;""" % ('t_' + current_date), \
                     (pre_history[i][2], i))
     con.commit()
+    for i in Day.query.all():
+        db.session.delete(i)
+    db.session.commit()
+    return 'The day is over'
 
 
 def repr_history(day, month, year, column='flt'):
@@ -207,7 +211,7 @@ def save_pass(user_id):
     db.session.commit()
 
 def create_user(username, name, surname, patronymic, role):
-    db.session.add(User(username=username, name=name, patronymic=patronymic,\
-                        role=role))
+    db.session.add(User(username=username, name=name, surname=surname, \
+                        patronymic=patronymic, role=role))
     db.session.commit()
  

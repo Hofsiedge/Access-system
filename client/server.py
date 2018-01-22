@@ -4,16 +4,9 @@ from _thread import start_new_thread
 from HammingCode import HammingCodec
 from SocketFixedLen import FLSocket
 from BinaryProtocol import BinaryProtocol as BP
+import requests
 
-pseudo_database = {0: 'Фамилия1 Имя1 Отчество1',
-                   1: 'Фамилия2 Имя2 Отчество2',
-                   2: 'Фамилия3 Имя3 Отчество3',
-                   3: 'Фамилия4 Имя4 Отчество4',
-                   4: 'Фамилия5 Имя5 Отчество5',
-                   5: 'Фамилия6 Имя6 Отчество6',
-                   6: 'Фамилия7 Имя7 Отчество7',
-                   7: 'Фамилия8 Имя8 Отчество8',
-                   8: 'Фамилия9 Имя9 Отчество9'}
+site = 'http://127.0.01:5000'
 
 def send_passer_name(conn, message):
     message = message.encode('utf-8')
@@ -21,15 +14,17 @@ def send_passer_name(conn, message):
         conn.send(bytes(divmod(BP.passing(message[i]), 256)))
     conn.send(bytes(divmod(BP.passing(0), 256)))
 
+def send_command(conn, cmd):
+    send_passer_name(conn, requests.post(site + '/command', data={'command': cmd}).text)
+
 def threaded_client(conn):
     try:
         while True:
-            #data = [BP.decode(i) for i in conn.recv()]
             data = conn.recv()
             data = data[0] * 256 + data[1]
             data = BP.decode(data)
             print('Received data:', data)
-            send_passer_name(conn, pseudo_database[data])
+            send_command(conn, data)
     except RuntimeError as e:
         print(e)
     #except Exception as e:
