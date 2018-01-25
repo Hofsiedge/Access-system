@@ -2,7 +2,7 @@ from flask import render_template, session, redirect, url_for, request
 from . import main
 from .forms import RegistrationForm
 from .. import db
-from ..models import create_user, Role, User, save_pass, save_day
+from ..models import create_user, Role, User, Day, Class, save_pass, save_day, repr_history, get_dates
 
 
 @main.route('/', methods=['GET', 'POST'])
@@ -32,6 +32,10 @@ def registration():
         return redirect(url_for('.registration'))
     return render_template('registration.html', form=form)
 
+@main.route('/admin_tab', methods=['GET', 'POST'])
+def admin_tab():
+    return render_template('admin_tab.html', tables=[Day, User, Role, Class], dates=get_dates(), repr_history=repr_history, user_quantity=len(User.query.all()))
+
 commands = {
     1024: lambda: 'Connection is fine', # Test connection command
     1365: save_day # The end of the day command
@@ -44,7 +48,6 @@ def command():
     if command in commands:
         return commands[command]()
     else:
-        #FIXME
         save_pass(command)
         user = User.query.filter_by(id=command).first()
         return repr(user)

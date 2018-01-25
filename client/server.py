@@ -35,12 +35,11 @@ def threaded_client(conn):
 
 if __name__ == '__main__':
     sock = socket(AF_INET, SOCK_STREAM)
-    sock.bind(('', 9090))
+    sock.bind(('', 9091))
     sock.listen(3)
 
     while True:
         conn, addr = sock.accept()
-        conn.settimeout(10)
         conn = FLSocket(2, conn)
         print('Connected: ', addr)
 

@@ -136,7 +136,7 @@ def save_day():
     cur = con.cursor()
     #
     # TODO: REMOVE WHEN END DEBUGING!!!
-    #cur.execute('DROP TABLE history;')
+    # cur.execute('DROP TABLE history;')
     #
     cur.execute("""SELECT name FROM sqlite_master
                 WHERE type='table' AND name='history';""")
@@ -178,7 +178,6 @@ def repr_history(day, month, year, column='flt'):
     current_date = '_'.join(map(str, (day, month, year)))
     f, l, t = 'f_' + current_date, 'l_' + current_date, 't_' + current_date
     # first, last, total
-    print('d_' + '_'.join(map(str, (day, month, year))))
     cur = sqlite3.connect('history.sqlite').cursor()
     query_list = ['user_id']
     if 'f' in column:
@@ -189,9 +188,14 @@ def repr_history(day, month, year, column='flt'):
         query_list.append(t)
     cur.execute('SELECT %s FROM history;' % \
                 (', '.join(query_list)))
-    print('', *cur.fetchall(), sep='\n')
-
     return cur.fetchall()
+
+def get_dates():
+    conn = sqlite3.connect('history.sqlite')
+    cur = conn.cursor()
+    t = cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND tbl_name='history';").fetchone()
+    dates = [i.split('_')[1:] for i in t[0][126:-1].split()[::6]]
+    return dates
 
 def create_parent(user_parent, pupil):
     """ Create a parent user """
