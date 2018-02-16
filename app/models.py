@@ -3,6 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from . import db 
 from datetime import datetime, timedelta
 import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+from . import login_manager
 
 
 class Role(db.Model):
@@ -16,11 +19,13 @@ class Role(db.Model):
         return self.name
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     """ Class, representing the User model """
+    # TODO: Duplication exception processing
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, unique=True)
+    email = db.Column(db.String, unique=True)
+    password_hash = db.Column(db.String(128))
     name = db.Column(db.String(64))
     surname = db.Column(db.String(64))
     patronymic = db.Column(db.String(64))
@@ -30,8 +35,26 @@ class User(db.Model):
     form = db.relationship('Class', backref='user', lazy='dynamic')
     parent = db.relationship('Parent', backref='user', lazy='dynamic')
 
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
     def __repr__(self):
-        return ' '.join([self.name, self.surname, self.patronymic, repr(self.role)])
+        # TODO: add the photo (from the API)
+        suffix = []
+        if self.form:
+            suffix.append(repr(self.form), repr(self.parent))
+        elif self.pupil:
+            suffix.append(repr(self.pupil))
+        return ' '.join([self.surname, self.name, self.patronymic,
+                         repr(self.role)] + suffix)
 
 
 class Day(db.Model):
@@ -214,8 +237,11 @@ def save_pass(user_id):
     db.session.add(Day(user=user, time=datetime.time(datetime.now())))
     db.session.commit()
 
-def create_user(username, name, surname, patronymic, role):
-    db.session.add(User(username=username, name=name, surname=surname, \
+def create_user(email, name, surname, patronymic, role):
+    db.session.add(User(email=email, name=name, surname=surname, \
                         patronymic=patronymic, role=role))
     db.session.commit()
  
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))

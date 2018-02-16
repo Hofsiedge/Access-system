@@ -20,16 +20,16 @@
              <a class="navbar-brand" href="/">Название</a>
         </div>
         <div class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li>
-                    <a href="{{url_for('main.show_table')}}">Таблица посещений</a>
-                </li>
-                <li>
-                    <a href="{{url_for('main.registration')}}">Регистрация</a>
-                </li>
-                <li>
-                    <a href="{{url_for('main.admin_tab')}}">Панель администратора</a>
-                </li>
+            <ul class="nav navbar-nav navbar-left">
+                <li><a href="{{url_for('main.show_table')}}">Таблица посещений</a></li>
+                <li><a href="{{url_for('main.admin_tab')}}">Панель администратора</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('auth.logout') }}">Выход</a></li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">Вход</a></li>
+                {% endif %}
             </ul>
         </div>
     </div>

@@ -1,4 +1,5 @@
 from flask import render_template, session, redirect, url_for, request
+from flask_login import login_required
 from . import main
 from .forms import RegistrationForm
 from .. import db
@@ -10,6 +11,7 @@ def index():
     return render_template('index.html')
 
 @main.route('/history', methods=['GET', 'POST'])
+@login_required
 def show_table():
     return render_template('show_table.html')
 
@@ -17,8 +19,8 @@ def show_table():
 def registration():
     form = RegistrationForm()
     if form.validate_on_submit():
-        username = form.username.data
-        form.username.data = ''
+        email = form.email.data
+        form.email.data = ''
         name = form.name.data
         form.name.data = ''
         surname = form.surname.data
@@ -28,11 +30,12 @@ def registration():
         #TODO: e-mail
         role = Role.query.filter_by(id=int(form.role.data)).first()
         print(int(form.role.data), role)
-        create_user(username, name, surname, patronymic, role)
+        create_user(email, name, surname, patronymic, role)
         return redirect(url_for('.registration'))
     return render_template('registration.html', form=form)
 
 @main.route('/admin_tab', methods=['GET', 'POST'])
+@login_required
 def admin_tab():
     return render_template('admin_tab.html', tables=[Day, User, Role, Class], dates=get_dates(), repr_history=repr_history, user_quantity=len(User.query.all()))
 
@@ -41,6 +44,7 @@ commands = {
     1365: save_day # The end of the day command
 }
 
+# TODO: access only for special group of accounts
 @main.route('/command', methods=['POST'])
 def command():
     print(request)

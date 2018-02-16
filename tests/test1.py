@@ -26,19 +26,6 @@ class BasicTestCase(unittest.TestCase):
     def test_app_is_testing(self):
         self.assertTrue(self.app.config['TESTING'])
 
-    def test_roles_initializing(self):
-        admin = Role(name='Admin')
-        teacher = Role(name='Teacher')
-        pupil = Role(name='Pupil')
-        parent = Role(name='Parent')
-        db.session.add_all([admin, teacher, pupil, parent])
-        db.session.commit()
-        
-    def test_user_creating(self):
-        self.test_roles_initializing()
-        teacher = Role.query.filter_by(name='Teacher').first()
-        create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич', teacher)
-
     def test_classes_creation(self):
         create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич',
                     Role.query.filter_by(name='Teacher').first())
@@ -48,6 +35,19 @@ class BasicTestCase(unittest.TestCase):
         create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич', None)
         save_pass(User.query.filter_by(username='vasya_pupkin').first().id)
 
+
+class ParentModelTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+        
     def test_parent_creation(self):
         create_user('parent_1', 'Вася', 'Пупкин', 'Алексеевич', None)
         class10A = Class(form=10, liter='A', user=User.query.filter_by(id=1).first())
@@ -61,6 +61,39 @@ class BasicTestCase(unittest.TestCase):
         assert Pupil_info.query.filter_by(id=1).first().parent.id == 1
         assert Parent.query.filter_by(user_id=1).first().pupils[0] == \
                 Pupil_info.query.filter_by(id=1).first()
+
+
+class RolesModelTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_roles_initializing(self):
+        admin = Role(name='Admin')
+        teacher = Role(name='Teacher')
+        pupil = Role(name='Pupil')
+        parent = Role(name='Parent')
+        db.session.add_all([admin, teacher, pupil, parent])
+        db.session.commit()
+
+class HistoryDBTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
 
     def test_history_update(self):
         pupil = Role(name='Pupil')
@@ -80,5 +113,28 @@ class BasicTestCase(unittest.TestCase):
         save_pass(1)
         save_pass(2)
         save_day()
-        #print('', *repr_history(4, 1, 2018), sep='\n')
 
+class UserModelTestCase(unittest.TestCase):
+    def test_user_creating(self):
+        self.test_roles_initializing()
+        teacher = Role.query.filter_by(name='Teacher').first()
+        create_user('vasya_pupkin', 'Вася', 'Пупкин', 'Алексеевич', teacher)
+
+    def test_password_setter(self):
+        u = User(password = 'cat')
+        self.assertTrue(u.password_hash is not None)
+
+    def test_no_password_getter(self):
+        u = User(password = 'cat')
+        with self.assertRaises(AttributeError):
+            u.password
+
+    def test_password_verification(self):
+        u = User(password = 'cat')
+        self.assertTrue(u.verify_password('cat'))
+        self.assertFalse(u.verify_password('not a cat'))
+    
+    def test_salts_are_random(self):
+        u1 = User(password='cat')
+        u2 = User(password='cat')
+        self.assertTrue(u1.password_hash != u2.password_hash)

@@ -34,7 +34,6 @@ def create_DB():
 def deploy():
     """ Run """
     db.drop_all()
-    #db.create_all()
     create_DB()
     app.run()
 
