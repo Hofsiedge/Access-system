@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from flask import current_app
 from . import login_manager
 
 
@@ -29,11 +31,29 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(64))
     surname = db.Column(db.String(64))
     patronymic = db.Column(db.String(64))
+    confirmed = db.Column(db.Boolean, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     day = db.relationship('Day', backref='user', lazy='dynamic')
     pupil = db.relationship('Pupil_info', backref='user', lazy='dynamic')
     form = db.relationship('Class', backref='user', lazy='dynamic')
     parent = db.relationship('Parent', backref='user', lazy='dynamic')
+
+    def generate_confirmation_token(self, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'confirm': self.id})
+
+    def confirm(self, token, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        if data.get('confirm') != self.id:
+            return False
+        self.confirmed = True
+        db.session.add(self)
+        db.session.commit()
+        return True
 
     @property
     def password(self):
