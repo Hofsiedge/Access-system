@@ -13,10 +13,12 @@ class Config:
     MAIL_PORT = 465 
     # MAIL_USE_TLS = True
     MAIL_USE_SSL = True
-    MAIL_SENDER = 'Система контроля посещаемости <zuev.ilia.al@yandex.ru>'
+    # FIXME: С пробелами работает криво
+    MAIL_SENDER = 'Контроль посещаемости <zuev.ilia.al@yandex.ru>'
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_SUBJECT_PREFIX = 'Система контроля посещаемости '
+    # MAIL_SUBJECT_PREFIX = 'Контроль&#160;посещаемости&#160;'
+    MAIL_SUBJECT_PREFIX = '&#160;'
 
     @staticmethod
     def init_app(app):

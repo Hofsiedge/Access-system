@@ -11,8 +11,13 @@
 
 <div class="col-md-4">
     {{ wtf.quick_form(form) }}
-    <br>
-    {{ wtf.quick_form(form2) }}
+<br>
+<div class="col-md-6">
+    <a href="{{ url_for('auth.register') }}">Зарегистрироваться</a>
+</div>
+<div class="col-md-6">
+    <a href="{{ url_for('auth.password_reset_request') }}">Забыли пароль?</a>
+</div>
 </div>
 
 {% endblock %}
