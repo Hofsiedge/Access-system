@@ -24,9 +24,7 @@ def test():
 
 def create_DB():
     db.create_all()
-    db.session.add_all([Role(name='Admin'), Role(name='Teacher'),
-                        Role(name='Pupil'), Role(name='Parent'), 
-                        Class(form=11, liter='A', user=None)])
+    Role.insert_roles()
     db.session.commit()
 
 

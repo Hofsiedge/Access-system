@@ -4,7 +4,7 @@ from . import db
 from datetime import datetime, timedelta
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 from . import login_manager
@@ -15,10 +15,71 @@ class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
+    permissions = db.Column(db.Integer)
     users = db.relationship('User', backref='role', lazy='dynamic')
+
+    @staticmethod
+    def insert_roles():
+        roles = [
+            ('Pupil', Permission.V_1 | Permission.M_1),
+            ('Parent', Permission.V_1 | Permission.V_2 | Permission.M_1),
+            ('Teacher', Permission.V_1 | Permission.V_2 | Permission.V_3 |
+                        Permission.V_4 | Permission.M_2 | Permission.M_3 |
+                        Permission.M_4 | Permission.M_5 | Permission.A_1),
+            ('Headteacher', Permission.V_1 | Permission.V_2 | Permission.V_3 |
+                            Permission.V_4 | Permission.V_5 | Permission.V_6 |
+                            Permission.M_2 | Permission.M_3 | Permission.M_4 |
+                            Permission.M_5 | Permission.A_1),
+            ('Headmaster', Permission.A_3 - 1 - Permission.M_1),
+            ('Admin', 2 * Permission.A_4 - 1)
+        ]
+        for r in roles:
+            role = Role.query.filter_by(name=r[0]).first()
+            if role is None:
+                role = Role(name=r[0])
+            role.permissions = r[1]
+            db.session.add(role)
+            db.session.commit()
+
+    def has_permission(self, permission):
+        return self.permissions & permission == permission
+
+    def reset_permissions(self):
+        self.permissions = 0
+
+    def remove_permission(self, permission):
+        self.permissions &= ~permission
+
+    def add_permission(self, permission):
+        self.permissions |= permission
+            
 
     def __repr__(self):
         return self.name
+
+
+class Permission:
+    # Просматривать посещения:
+    V_1 = 0x01 # свои
+    V_2 = 0x02 # своих детей
+    V_3 = 0x04 # своих учеников
+    V_4 = 0x08 # родителей своих учеников
+    V_5 = 0x10 # учителей
+    V_6 = 0x20 # всех учеников
+    V_7 = 0x40 # завучей, директора и прочих
+    # Писать: 
+    M_1 = 0x80  # классному руководителю
+    M_2 = 0x100 # ученикам
+    M_3 = 0x200 # родителям
+    M_4 = 0x400 # учителям
+    M_5 = 0x800 # завучам, директору и прочим
+    # Изменять:
+    A_1 = 0x1000 # профили учеников своих
+    A_2 = 0x2000 # изменять все профили, кроме админского
+    A_3 = 0x4000 # изменять сайт
+    A_4 = 0x8000 # изменять таблицы
+
+
 
 
 class User(UserMixin, db.Model):
@@ -51,6 +112,8 @@ class User(UserMixin, db.Model):
         if data.get('confirm') != self.id:
             return False
         self.confirmed = True
+        if self.email == current_app.config['ADMIN']:
+            self.role = Role.query.filter_by(name='Admin').first()
         db.session.add(self)
         db.session.commit()
         return True
@@ -107,6 +170,12 @@ class User(UserMixin, db.Model):
         db.session.add(self)
         db.session.commit()
         return True
+    
+    def can(self, permissions):
+        return (self.role.permissions & permissions) == permissions
+
+    def is_administrator(self): 
+        return self.can(Permission.A_4 * 2 - 1)
 
     def __repr__(self):
         # TODO: add the photo (from the API)
@@ -118,6 +187,15 @@ class User(UserMixin, db.Model):
         return ' '.join([self.surname, self.name, self.patronymic,
                          repr(self.role)] + suffix)
 
+
+class AnonymousUser(AnonymousUserMixin):
+    def can(self, permissions):
+        return False
+
+    def is_administrator(self):
+        return False
+
+login_manager.anonymous_user = AnonymousUser
 
 class Day(db.Model):
     """

@@ -19,6 +19,7 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     # MAIL_SUBJECT_PREFIX = 'Контроль&#160;посещаемости&#160;'
     MAIL_SUBJECT_PREFIX = '&#160;'
+    ADMIN = os.environ.get('ADMIN')
 
     @staticmethod
     def init_app(app):

@@ -19,9 +19,11 @@ class RegistrationForm(FlaskForm):
 
     # TODO: 'have no patronymic' option
 
-    role =  SelectField('Кто Вы?', choices=[('3', 'Ученик'),
-                                            ('4', 'Родитель'),
-                                            ('2', 'Учитель')])
+    role =  SelectField('Кто Вы?', choices=[('1', 'Ученик'),
+                                            ('2', 'Родитель'),
+                                            ('3', 'Учитель'),
+                                            ('4', 'Завуч'),
+                                            ('5', 'Директор')])
     email = StringField('Адрес электронной почты', validators=[Email(), DataRequired(),
                                                                Length(1, 64)])
     password = PasswordField('Пароль', validators=[DataRequired(), Length(1, 64),

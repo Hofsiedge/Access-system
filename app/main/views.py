@@ -4,6 +4,7 @@ from . import main
 from .forms import RegistrationForm
 from .. import db
 from ..models import create_user, Role, User, Day, Class, save_pass, save_day, repr_history, get_dates
+from ..decorators import permission_required, admin_required
 
 
 @main.route('/', methods=['GET', 'POST'])
@@ -36,6 +37,7 @@ def registration():
 
 @main.route('/admin_tab', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_tab():
     return render_template('admin_tab.html', tables=[Day, User, Role, Class], dates=get_dates(), repr_history=repr_history, user_quantity=len(User.query.all()))
 
