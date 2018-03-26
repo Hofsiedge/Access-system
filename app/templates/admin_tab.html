@@ -23,10 +23,10 @@ Admin tools
     </tr>
 </thead>
 <tbody>
-{% for passing in table.query.all() %}
+{% for unit in table.query.all() %}
     <tr>
         {% for key in table.__table__.columns.keys() %}
-        <td>{{ passing.__dict__[key] }}</td>
+        <td>{{ unit.__dict__[key] }}</td>
         {% endfor %}
     </tr>
 {% endfor %}
@@ -34,48 +34,5 @@ Admin tools
 </table>
 <br>
 {% endfor %}
-
-<div class = "table-responsive">
-<table class="table table-hover table-condensed">
-<thead class="thead thead-light">
-    <tr>
-        <div>History</div>
-    </tr>
-    <tr>
-        <th rowspan=2> User id </th>
-
-        {% for date in dates %}
-
-        <th colspan=3>{{ '.'.join(date) }}</th>
-
-        {% endfor %}
-    </tr>
-    <tr>
-        {% for i in range(dates.__len__()) %}
-        <th>First</th>
-        <th>Last</th>
-        <th>Total</th>
-        {% endfor %}
-    </tr>
-</thead>
-<tbody>
-{% for user in range(1, user_quantity + 1) %}
-    <tr>
-        <td> {{ user }} </td>
-        {% for date in dates %}
-        {% for record in repr_history(*date) %}
-        {% if user == record[0] %}
-        <td>{{ record[1] }}</td>
-        <td>{{ record[2] }}</td>
-        <td>{{ record[3] }}</td>
-        {% endif %}
-        {% endfor %}
-        {% endfor %}
-    </tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-<br>
 
 {% endblock %}

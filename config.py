@@ -4,7 +4,7 @@ BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     CSRF_ENABLED = True
-# TODO: environment variables
+# TODO: permanent environment variables
     SECRET_KEY = os.environ.get('SECRET_KEY')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
@@ -21,6 +21,10 @@ class Config:
     MAIL_SUBJECT_PREFIX = '&#160;'
     ADMIN = os.environ.get('ADMIN')
 
+    POSTGRES_URL = os.environ.get("POSTGRES_URL")
+    POSTGRES_USER = os.environ.get("POSTGRES_USER")
+    POSTGRES_PW = os.environ.get("POSTGRES_PW")
+
     @staticmethod
     def init_app(app):
         pass
@@ -28,8 +32,13 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASEDIR, 'data-dev.sqlite') 
+    POSTGRES_DB = os.environ.get("POSTGRES_DEV_DB")
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://{user}:{pw}@{url}/{db}'.format(user=Config.POSTGRES_USER, \
+                                                                   pw=Config.POSTGRES_PW, \
+                                                                   url=Config.POSTGRES_URL, \
+                                                                   db=POSTGRES_DB)
 
+# TODO: switch other DBs to PostgreSQL
 
 class TestingConfig(Config):
     TESTING = True
