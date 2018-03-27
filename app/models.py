@@ -55,13 +55,13 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String, unique=True)
-    password_hash = db.Column(db.String(128))
-    name = db.Column(db.String(64))
     surname = db.Column(db.String(64))
+    name = db.Column(db.String(64))
     patronymic = db.Column(db.String(64))
-    confirmed = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    confirmed = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(128))
     passing = db.relationship('Passing', backref='user', lazy='dynamic')
     pupil = db.relationship('Pupil_info', backref='user', lazy='dynamic')
     form = db.relationship('Class', backref='user', lazy='dynamic')
@@ -176,6 +176,12 @@ class User(UserMixin, db.Model):
 
     # TODO: get user information for client method
 
+    @staticmethod
+    def create_user(email, name, surname, patronymic, role):
+        db.session.add(User(email=email, name=name, surname=surname, \
+                            patronymic=patronymic, role=role))
+        db.session.commit()
+
     def __repr__(self):
         return ''.join((self.surname, ' ', self.name[0], '.', \
                         self.patronymic[0], '. ', repr(self.role)))
@@ -258,6 +264,12 @@ class Pupil_info(db.Model):
     form_id = db.Column(db.SmallInteger, db.ForeignKey('classes.id'))
     parent_id = db.Column(db.Integer, db.ForeignKey('parents.id'))
 
+    @staticmethod
+    def connect_pupil_info(user, form):
+        """ Attach pupil_info to the pupil """
+        db.session.add(Pupil_info(user=user, form=form))
+        db.session.commit()
+
     def __repr__(self):
         return ' '.join(map(str, [self.user, self.form.form, self.form.liter]))
 
@@ -269,6 +281,13 @@ class Parent(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     pupils = db.relationship('Pupil_info', backref='parent')
 
+    @staticmethod
+    def connect_child(user_parent, pupil):
+        """ Create a parent user """
+        pupil.parent_id = user_parent.id
+        db.session.add_all([Parent(user=user_parent), pupil])
+        db.session.commit()
+
 
 class Passing(db.Model):
     __tablename__ = 'passings'
@@ -277,13 +296,19 @@ class Passing(db.Model):
     date = db.Column(db.Date, db.ForeignKey('days.date'))
     time = db.Column(db.DateTime)
 
+    # TODO: Check
     @staticmethod
-    def create_passing(user, date, time=None):
+    def save_pass(user_id, date,time=None):  
+        """ Register passing """
+        user = User.query.get(user_id)
         if time is None:
             time = datetime.time(*datetime.datetime.now().timetuple()[3:6])
         if type(time) is not datetime.time:
             time = datetime.time(*time)
-        return Passing(user=user, day=Day.query.get(1), time=time)
+        if day is None:
+            day = Day.query.all()[-1]
+        db.session.add(Passing(user=user, day=day, time=time))
+        db.session.commit()
 
     def __repr__(self):
         return ' '.join([repr(self.day), str(self.time), repr(self.user)])
@@ -301,6 +326,10 @@ class Day(db.Model):
             assert date is not None
             date = datetime.date(*date)
         return Day(date=date)
+
+    def save_day(self):
+        """ Compute total_inside for each user at the last day and save it """
+        pass
 
     def __repr__(self):
         return str(self.date)
@@ -320,37 +349,8 @@ login_manager.anonymous_user = AnonymousUser
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-
 # TODO: check query optimization
-
-def get_dates():
-    pass
-
-def save_day(s):
-    """ Compute total_inside for each user at the last day and save it """
-    pass
 
 def repr_history():
     pass
 
-def create_parent(user_parent, pupil):
-    """ Create a parent user """
-    pupil.parent_id = user_parent.id
-    db.session.add_all([Parent(user=user_parent), pupil])
-    db.session.commit()
-
-def connect_pupil_info(user, form):
-    """ Attach pupil_info to the pupil """
-    db.session.add(Pupil_info(user=user, form=form))
-    db.session.commit()
-
-def save_pass(user_id):  
-    """ Register passing """
-    user = User.query.get(user_id)
-    db.session.add(Passing(user=user, day=Day.query.all()[-1], time=datetime.time(datetime.utcnow())))
-    db.session.commit()
-
-def create_user(email, name, surname, patronymic, role):
-    db.session.add(User(email=email, name=name, surname=surname, \
-                        patronymic=patronymic, role=role))
-    db.session.commit()

@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from . import main
 from .forms import EditProfileForm
 from .. import db
-from ..models import create_user, Role, User, Day, Class, Passing, save_pass, TimeInside, repr_history 
+from ..models import Role, User, Day, Class, Passing, TimeInside, repr_history 
 from ..decorators import permission_required, admin_required
 
 
@@ -37,7 +37,7 @@ def command():
     if command in commands:
         return commands[command]()
     else:
-        save_pass(command)
+        Passing.save_pass(command)
         user = User.query.get_or_404(id=command)
         return repr(user)
 
