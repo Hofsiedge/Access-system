@@ -298,15 +298,18 @@ class Passing(db.Model):
 
     # TODO: Check
     @staticmethod
-    def save_pass(user_id, date,time=None):  
+    def create_passing(user_id, day, time=None):  
         """ Register passing """
+        assert user_id is not None
         user = User.query.get(user_id)
         if time is None:
-            time = datetime.time(*datetime.datetime.now().timetuple()[3:6])
+            time = datetime.datetime(*datetime.datetime.now().timetuple()[3:6])
         if type(time) is not datetime.time:
-            time = datetime.time(*time)
+            time = datetime.datetime(*time)
         if day is None:
             day = Day.query.all()[-1]
+        else:
+            day = Day.query.filter_by(date=datetime.date(*day)).first()
         db.session.add(Passing(user=user, day=day, time=time))
         db.session.commit()
 
@@ -325,7 +328,8 @@ class Day(db.Model):
         if type(date) is not datetime.date:
             assert date is not None
             date = datetime.date(*date)
-        return Day(date=date)
+        db.session.add(Day(date=date))
+        db.session.commit()
 
     def save_day(self):
         """ Compute total_inside for each user at the last day and save it """

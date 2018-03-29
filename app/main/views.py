@@ -1,7 +1,7 @@
-from flask import render_template, session, redirect, url_for, request, abort, flash
+from flask import render_template, session, redirect, url_for, request, abort, flash, jsonify
 from flask_login import login_required, current_user
 from . import main
-from .forms import EditProfileForm
+from .forms import EditProfileForm, DBForm, CreatePassingForm
 from .. import db
 from ..models import Role, User, Day, Class, Passing, TimeInside, repr_history 
 from ..decorators import permission_required, admin_required
@@ -14,14 +14,36 @@ def index():
 @main.route('/history', methods=['GET', 'POST'])
 @login_required
 def show_table():
-    return render_template('show_table.html')
+    form = DBForm()
+    return render_template('show_table.html', form=form)
+
+# TODO
+@main.route('/table', methods=['POST'])
+@login_required
+def get_DB():
+    form = DBForm()
+    if form.validate_on_submit():
+        day = Day.query.filter_by(date=datetime.date(*list(map(int, form.day.data.split('-'))))).first()
+        user = User.query.get_or_404(form.user_id.data)
+        res = TotalInside.query.filter_by(day=day, user=user).all()
+        return jsonify(data={'message': res})
+    return jsonify(data=form.errors)
 
 @main.route('/admin_tab', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def admin_tab():
     # FIXME
-    return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing], repr_history=repr_history, user_quantity=len(User.query.all()))
+    PC_form = CreatePassingForm()
+    if PC_form.validate_on_submit():
+        Passing.create_passing(user_id=int(PC_form.user_id.data),
+                               day=list(map(int, PC_form.date.data.split('-'))),
+                               time=list(map(int, PC_form.time.data.split(':'))))
+        PC_form.user_id.data = ''
+        PC_form.date.data = ''
+        PC_form.time.data = ''
+        return redirect(url_for('main.admin_tab'))
+    return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing], user_quantity=len(User.query.all()), passing_create_form=PC_form)
 
 commands = {
     1024: lambda: 'Connection is fine',     # Test connection command
