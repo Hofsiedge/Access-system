@@ -1,5 +1,6 @@
 from flask import render_template, session, redirect, url_for, request, abort, flash, jsonify
 from flask_login import login_required, current_user
+import datetime
 from . import main
 from .forms import EditProfileForm, DBForm, CreatePassingForm
 from .. import db
@@ -25,7 +26,7 @@ def get_DB():
     if form.validate_on_submit():
         day = Day.query.filter_by(date=datetime.date(*list(map(int, form.day.data.split('-'))))).first()
         user = User.query.get_or_404(form.user_id.data)
-        res = TotalInside.query.filter_by(day=day, user=user).all()
+        res = TimeInside.query.filter_by(day=day, user=user).all()
         return jsonify(data={'message': res})
     return jsonify(data=form.errors)
 
@@ -43,7 +44,8 @@ def admin_tab():
         PC_form.date.data = ''
         PC_form.time.data = ''
         return redirect(url_for('main.admin_tab'))
-    return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing], user_quantity=len(User.query.all()), passing_create_form=PC_form)
+    return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing],
+                           user_quantity=len(User.query.all()), passing_create_form=PC_form)
 
 commands = {
     1024: lambda: 'Connection is fine',     # Test connection command

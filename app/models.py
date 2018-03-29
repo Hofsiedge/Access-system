@@ -41,10 +41,10 @@ class TimeInside(db.Model):
         for passing in Passing.query.filter_by(day=day).all():
             passings_dict[passing.user].append(passing.time)
         for u in passings_dict.keys():
-            passings_dict[u] = sum([passings_dict[i+1] - passings_dict[i+1] \
+            passings_dict[u] = sum([passings_dict[u][i+1] - passings_dict[u][i] \
                                     for i in range(0, len(passings_dict[u]) // 2)],
                                    datetime.timedelta())
-        db.session.add([TimeInside(user=u, day=day, time=passings_dict[u]) \
+        db.session.add_all([TimeInside(user=u, day=day, total_inside=passings_dict[u]) \
                         for u in passings_dict.keys() if passings_dict[u]])
         db.session.commit()
 
@@ -303,9 +303,9 @@ class Passing(db.Model):
         assert user_id is not None
         user = User.query.get(user_id)
         if time is None:
-            time = datetime.datetime(*datetime.datetime.now().timetuple()[3:6])
+            time = datetime.datetime(2018, 1, 1, *datetime.datetime.now().timetuple()[3:6])
         if type(time) is not datetime.time:
-            time = datetime.datetime(*time)
+            time = datetime.datetime(2018, 1, 1, *time)
         if day is None:
             day = Day.query.all()[-1]
         else:
@@ -322,6 +322,7 @@ class Day(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False, unique=True)
     passing = db.relationship('Passing', backref='day', lazy='dynamic')
+    timeinside = db.relationship('TimeInside', backref='day', lazy='dynamic')
 
     @staticmethod
     def create_day(date=datetime.date(*datetime.datetime.now().timetuple()[0:3])):
