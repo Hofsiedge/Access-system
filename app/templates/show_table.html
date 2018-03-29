@@ -19,8 +19,30 @@
 
 </p>
 
-# Just a script for AJAX requests
-<script>
+<div class="container">
+<table id="history_table" class="table table-bordered table-hover">
+    <thead>
+    <tr>
+        <th></th>
+        {% for day in days %}
+        <th>{{ day.day }}</th>
+        {% endfor %}
+    </tr>
+    </thead>
+    <tbody>
+    {% for user in history %}
+    <tr>
+        <td>{{ user }}</td>
+        {% for day in history[user] %}
+        <td> {{ day.total_inside }} </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<script> // Just a script for AJAX requests
     $(document).ready(function() {
         $('form').submit(function (e) {
             var url = "{{ url_for('main.get_DB') }}"; // send the form data here.
@@ -29,8 +51,10 @@
                 url: url,
                 data: $('form').serialize(), // serializes the form's elements.
                 success: function (data) {
+                    //
                     document.getElementById("bar").innerHTML = data.data.message;
                     console.log(data)  // display the returned data in the console.
+                    // 
                 }
             });
             e.preventDefault(); // block the traditional submission of the form.

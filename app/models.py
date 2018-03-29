@@ -296,14 +296,13 @@ class Passing(db.Model):
     date = db.Column(db.Date, db.ForeignKey('days.date'))
     time = db.Column(db.DateTime)
 
-    # TODO: Check
     @staticmethod
     def create_passing(user_id, day, time=None):  
         """ Register passing """
         assert user_id is not None
         user = User.query.get(user_id)
         if time is None:
-            time = datetime.datetime(2018, 1, 1, *datetime.datetime.now().timetuple()[3:6])
+            time = datetime.datetime(*datetime.datetime.now().timetuple())
         if type(time) is not datetime.time:
             time = datetime.datetime(2018, 1, 1, *time)
         if day is None:
@@ -334,7 +333,8 @@ class Day(db.Model):
 
     def save_day(self):
         """ Compute total_inside for each user at the last day and save it """
-        pass
+        TimeInside.compute_total_inside(day=self)
+        self.create_day(self.date + datetime.timedelta(days=1))
 
     def __repr__(self):
         return str(self.date)

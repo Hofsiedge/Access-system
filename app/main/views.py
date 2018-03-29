@@ -16,7 +16,13 @@ def index():
 @login_required
 def show_table():
     form = DBForm()
-    return render_template('show_table.html', form=form)
+    history = {}
+    for i in TimeInside.query.all():
+        if i.user in history:
+            history[i.user].append(i)
+        else:
+            history[i.user] = [i]
+    return render_template('show_table.html', form=form, history=history, days=[i for i in list(history.values())[0]])
 
 # TODO
 @main.route('/table', methods=['POST'])
@@ -44,7 +50,7 @@ def admin_tab():
         PC_form.date.data = ''
         PC_form.time.data = ''
         return redirect(url_for('main.admin_tab'))
-    return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing],
+    return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing, TimeInside],
                            user_quantity=len(User.query.all()), passing_create_form=PC_form)
 
 commands = {
