@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
+from sqlalchemy.ext.declarative import declarative_base
 from . import login_manager
 
 
@@ -67,6 +68,23 @@ class User(UserMixin, db.Model):
     form = db.relationship('Class', backref='user', lazy='dynamic')
     parent = db.relationship('Parent', backref='user', lazy='dynamic')
     timeinside = db.relationship('TimeInside', backref='user', lazy='dynamic')
+
+    #
+    #
+    #
+    # TODO
+    def allowed_to_read(self, user_id):
+        other = User.query.get(user_id)
+        # if self.role 
+        return True
+    #
+    #
+    #
+
+
+    @staticmethod
+    def get_passings(user_id, day_id):
+        return [':'.join(list(map(str, (i.time.hour, i.time.minute, i.time.second)))) for i in User.query.get(user_id).passing.filter_by(day=Day.query.get(day_id)).all()]
 
     def generate_confirmation_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
@@ -187,13 +205,28 @@ class User(UserMixin, db.Model):
                         self.patronymic[0], '. ', repr(self.role)))
 
 
+role_association = db.Table(
+    'role_association',
+    db.Column('subj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True),
+    db.Column('obj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True))
+
+
 class Role(db.Model):
     """ Class, representing the Role model (teacher, parent etc)"""
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
+    # TODO: CHANGE PERMISSIONS (DELETE V_X)
     permissions = db.Column(db.Integer)
     users = db.relationship('User', backref='role', lazy='dynamic')
+
+    can_see = db.relationship(
+        "Role",
+        secondary=role_association,
+        primaryjoin="Role.id == role_association.c.subj_roleid",
+        secondaryjoin="Role.id == role_association.c.obj_roleid",
+        backref=db.backref('visible_by', lazy='dynamic'),
+        lazy='dynamic')
 
     @staticmethod
     def insert_roles():
@@ -342,6 +375,9 @@ class Day(db.Model):
 
 class AnonymousUser(AnonymousUserMixin):
     def can(self, permissions):
+        return False
+
+    def allowed_to_read(self, user_id):
         return False
 
     def is_administrator(self):
