@@ -4,6 +4,7 @@
 {% block head %}
 {{ super() }}
 <script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='style.css') }}">
 {% endblock %}
 
 {% block title %}
@@ -59,6 +60,7 @@
             });
             e.preventDefault(); // block the traditional submission of the form.
         });
+
         // Inject our CSRF token into our AJAX request.
         $.ajaxSetup({
             beforeSend: function(xhr, settings) {
@@ -67,7 +69,61 @@
                 }
             }
         })
+
+        var table = document.getElementById("history_table");
+        for (var i = 0, row; row = table.rows[i]; i++) {
+            if (row.rowIndex > 0){
+                for (var j = 0, col; col = row.cells[j]; j++) {
+                    if (col.cellIndex > 0){
+                        var temp = col.innerHTML.split(':')
+                        var a = (255 - Math.floor((parseInt(temp[0]) * 3600 + parseInt(temp[1]) * 60 + parseInt(temp[2])) / 338)).toString(16);
+                        if (a.length == 1) a = '0' + a;
+                        col.style.backgroundColor = '#' + a + 'ff' + a;
+                    }
+                }
+            }
+        }
     });
+
+    // возвращает cookie с именем name, если есть, если нет, то undefined
+    function getCookie(name) {
+        var matches = document.cookie.match(new RegExp(
+            "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+        ));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+
+    var tbl = document.getElementById("history_table");
+    var user_list = "{{ meta_list[0] }}".split(", ");
+    var date_list = "{{ meta_list[1] }}".split(", ");
+    console.log(user_list, date_list);
+    function alertRowCell (e) {
+        var cell = e.target || window.event.srcElement;
+        if ( (cell.cellIndex > 0) & (cell.parentNode.rowIndex > 0) )
+            // alert( user_list[cell.parentNode.rowIndex - 1] + ' : ' +  date_list[cell.cellIndex - 1] );
+            $.ajax({
+                type: "GET",
+                url: "http://127.0.0.1:5000" + '/api/v1.0/passings/' + user_list[cell.parentNode.rowIndex - 1] + '/' + date_list[cell.cellIndex - 1],
+                // FIXME
+                headers: {"Authorization": getCookie('auth_token').slice(1, -1)},
+                success: function (data) {
+                    //
+                    // document.getElementById("bar").innerHTML = data.data.message;
+                    console.log(data)
+                    alert(data)
+                    // display the returned data in the console.
+                    //
+                }
+            });
+
+    }
+
+    if ( tbl.addEventListener ) {
+        tbl.addEventListener("click", alertRowCell, false);
+    } else if ( tbl.attachEvent ) {
+        tbl.attachEvent("onclick", alertRowCell);
+    }
+
 </script>
 
 {% endblock %}

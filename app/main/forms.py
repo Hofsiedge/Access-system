@@ -48,3 +48,7 @@ class CreatePassingForm(FlaskForm):
     # TODO: Validator for time format checking
     time = StringField('Time (HH:MM:SS)', validators=[Regexp(regex=r'^\d{2}:\d{2}:\d{2}$', message='Wrong format'), Length(8, 8), Required()])
     submit = SubmitField('Confirm')
+
+class SaveDayForm(FlaskForm):
+    day_id = StringField('Day id', validators=[Required(), Regexp(r'^\d+$')])
+    submit = SubmitField('Confirm')

@@ -1,4 +1,5 @@
-from flask import render_template, redirect, request, url_for, flash
+import base64
+from flask import render_template, redirect, request, url_for, flash, g
 from flask_login import login_user, login_required, logout_user, current_user
 from . import auth
 from .. import db
@@ -69,6 +70,10 @@ def before_request():
         current_user.ping()
         if not current_user.confirmed and request.endpoint[:5] != 'auth.':
             return redirect(url_for('auth.unconfirmed'))
+        if current_user is not AnonymousUser and not g.get('token'):
+            # FIXME: "Basic ..." remove "
+            g.token = 'Basic ' + base64.b64encode(bytes(current_user.generate_auth_token(expiration=3600).decode('utf-8') + ':', 'utf-8')).decode('utf-8')
+        # print('Token:', g.get('token'))
 
 
 @auth.route('/unconfirmed')

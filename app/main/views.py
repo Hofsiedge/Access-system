@@ -1,8 +1,8 @@
-from flask import render_template, session, redirect, url_for, request, abort, flash, jsonify
+from flask import render_template, session, redirect, url_for, request, abort, flash, jsonify, make_response, g
 from flask_login import login_required, current_user
 import datetime
 from . import main
-from .forms import EditProfileForm, DBForm, CreatePassingForm
+from .forms import EditProfileForm, DBForm, CreatePassingForm, SaveDayForm
 from .. import db
 from ..models import Role, User, Day, Class, Passing, TimeInside, repr_history 
 from ..decorators import permission_required, admin_required
@@ -22,9 +22,16 @@ def show_table():
             history[i.user].append(i)
         else:
             history[i.user] = [i]
-    return render_template('show_table.html', form=form, history=history, days=[i for i in list(history.values())[0]])
+    meta_list = [str([i.id for i in history])[1:-1],
+                 ', '.join([str(i.day.id) for i in history[list(history.keys())[0]]])] \
+            if history else []
+    days = [i for i in list(history.values())[0]] if history else []
+    resp = make_response(render_template('show_table.html', form=form, history=history, meta_list=meta_list, days=days))
+    resp.set_cookie('auth_token', (g.get('token') or ''))
+    return resp
+    # TODO: cookies added, need to add requests in show_table authorizing with JS
 
-# TODO
+# TODO: API for serving AJAX requests
 @main.route('/table', methods=['POST'])
 @login_required
 def get_DB():
@@ -40,7 +47,7 @@ def get_DB():
 @login_required
 @admin_required
 def admin_tab():
-    # FIXME
+    # TODO: add forms for other models
     PC_form = CreatePassingForm()
     if PC_form.validate_on_submit():
         Passing.create_passing(user_id=int(PC_form.user_id.data),
@@ -50,8 +57,15 @@ def admin_tab():
         PC_form.date.data = ''
         PC_form.time.data = ''
         return redirect(url_for('main.admin_tab'))
+    SD_form = SaveDayForm()
+    if SD_form.validate_on_submit():
+        Day.query.get(SD_form.day_id.data).save_day()
+        SD_form.day_id.data = ''
+        return redirect(url_for('main.admin_tab'))
+
     return render_template('admin_tab.html', tables=[Day, User, Role, Class, Passing, TimeInside],
-                           user_quantity=len(User.query.all()), passing_create_form=PC_form)
+                           user_quantity=len(User.query.all()), passing_create_form=PC_form,
+                           save_day_form=SD_form)
 
 commands = {
     1024: lambda: 'Connection is fine',     # Test connection command

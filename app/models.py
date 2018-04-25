@@ -1,6 +1,4 @@
-import flask_sqlalchemy
 # import sqlalchemy.func.now
-from flask_sqlalchemy import SQLAlchemy
 from . import db 
 # from datetime import datetime, timedelta, time, date
 import datetime
@@ -9,9 +7,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
-from sqlalchemy.ext.declarative import declarative_base
 from . import login_manager
 
+
+# TODO: Implement a model for groups creation
 
 class Class(db.Model):
     """ Class, representing the Class model """
@@ -69,18 +68,15 @@ class User(UserMixin, db.Model):
     parent = db.relationship('Parent', backref='user', lazy='dynamic')
     timeinside = db.relationship('TimeInside', backref='user', lazy='dynamic')
 
-    #
-    #
-    #
-    # TODO
-    def allowed_to_read(self, user_id):
+    # TODO: check
+    def can_read(self, user_id):
         other = User.query.get(user_id)
-        # if self.role 
-        return True
-    #
-    #
-    #
-
+        if other == self:
+            return True
+        # TODO: Chose the best one
+        # return other.role in self.role.can_see.all()
+        return self.role in other.role.visible_by.all()
+        # return self.role.can_see.filter_by(id=other.role.id).first() is not None
 
     @staticmethod
     def get_passings(user_id, day_id):
@@ -205,7 +201,17 @@ class User(UserMixin, db.Model):
                         self.patronymic[0], '. ', repr(self.role)))
 
 
-role_association = db.Table(
+role_asc_see = db.Table(    # Role 'see' association
+    'role_asc_see',
+    db.Column('subj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True),
+    db.Column('obj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True))
+
+role_asc_write = db.Table(  # Role 'can write to' association
+     'role_asc_write',
+     db.Column('subj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True),
+     db.Column('obj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True))
+ 
+role_asc_change = db.Table(
     'role_association',
     db.Column('subj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True),
     db.Column('obj_roleid', db.Integer, db.ForeignKey('roles.id'), primary_key=True))
@@ -217,39 +223,44 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     # TODO: CHANGE PERMISSIONS (DELETE V_X)
-    permissions = db.Column(db.Integer)
+    permissions = db.Column(db.Integer, default=0)
     users = db.relationship('User', backref='role', lazy='dynamic')
 
     can_see = db.relationship(
         "Role",
-        secondary=role_association,
-        primaryjoin="Role.id == role_association.c.subj_roleid",
-        secondaryjoin="Role.id == role_association.c.obj_roleid",
+        secondary=role_asc_see,
+        primaryjoin="Role.id == role_asc_see.c.subj_roleid",
+        secondaryjoin="Role.id == role_asc_see.c.obj_roleid",
         backref=db.backref('visible_by', lazy='dynamic'),
+        lazy='dynamic')
+
+    can_write = db.relationship(
+        "Role",
+        secondary=role_asc_write,
+        primaryjoin="Role.id == role_asc_write.c.subj_roleid",
+        secondaryjoin="Role.id == role_asc_write.c.obj_roleid",
+        backref=db.backref('can_receive_from', lazy='dynamic'),
         lazy='dynamic')
 
     @staticmethod
     def insert_roles():
-        roles = [
-            ('Pupil', Permission.V_1 | Permission.M_1),
-            ('Parent', Permission.V_1 | Permission.V_2 | Permission.M_1),
-            ('Teacher', Permission.V_1 | Permission.V_2 | Permission.V_3 |
-                        Permission.V_4 | Permission.M_2 | Permission.M_3 |
-                        Permission.M_4 | Permission.M_5 | Permission.A_1),
-            ('Headteacher', Permission.V_1 | Permission.V_2 | Permission.V_3 |
-                            Permission.V_4 | Permission.V_5 | Permission.V_6 |
-                            Permission.M_2 | Permission.M_3 | Permission.M_4 |
-                            Permission.M_5 | Permission.A_1),
-            ('Headmaster', Permission.A_3 - 1 - Permission.M_1),
-            ('Admin', 2 * Permission.A_4 - 1)
-        ]
-        for r in roles:
-            role = Role.query.filter_by(name=r[0]).first()
-            if role is None:
-                role = Role(name=r[0])
-            role.permissions = r[1]
-            db.session.add(role)
-            db.session.commit()
+        # TODO: Implement Groups to make more accurate access modificators
+        Pupil = Role(name='Pupil')              # Ученик
+        Parent = Role(name='Parent')            # Родитель
+        Teacher = Role(name='Teacher')          # Учитель
+        Headteacher = Role(name='Headteacher')  # Завуч
+        Headmaster = Role(name='Headmaster')    # Директор
+        Admin = Role(name='Admin')              # Администратор
+        Admin.permissions = Permission.ADMIN
+        db.session.add_all([Pupil, Parent, Teacher, Headteacher, Headmaster, Admin])
+
+        Teacher.can_see.extend([Pupil])
+        Headteacher.can_see.extend([Pupil])
+        Headmaster.can_see.extend([Pupil, Parent, Teacher, Headteacher])
+        Admin.can_see.extend([Pupil, Parent, Teacher, Headteacher])
+        # TODO: can_write & can_change
+
+        db.session.commit()
 
     def has_permission(self, permission):
         return self.permissions & permission == permission
@@ -262,31 +273,14 @@ class Role(db.Model):
 
     def add_permission(self, permission):
         self.permissions |= permission
-
+        
     def __repr__(self):
         return self.name
 
 
 class Permission:
-    # Просматривать посещения:
-    V_1 = 0x01 # свои
-    V_2 = 0x02 # своих детей
-    V_3 = 0x04 # своих учеников
-    V_4 = 0x08 # родителей своих учеников
-    V_5 = 0x10 # учителей
-    V_6 = 0x20 # всех учеников
-    V_7 = 0x40 # завучей, директора и прочих
-    # Писать: 
-    M_1 = 0x80  # классному руководителю
-    M_2 = 0x100 # ученикам
-    M_3 = 0x200 # родителям
-    M_4 = 0x400 # учителям
-    M_5 = 0x800 # завучам, директору и прочим
-    # Изменять:
-    A_1 = 0x1000 # профили учеников своих
-    A_2 = 0x2000 # изменять все профили, кроме админского
-    A_3 = 0x4000 # изменять сайт
-    A_4 = 0x8000 # изменять таблицы
+    ADMIN = 0x01 # Право на администрирование
+    MODER = 0x02 # Право на модерирование
 
 
 class Pupil_info(db.Model):
@@ -337,7 +331,7 @@ class Passing(db.Model):
         if time is None:
             time = datetime.datetime(*datetime.datetime.now().timetuple())
         if type(time) is not datetime.time:
-            time = datetime.datetime(2018, 1, 1, *time)
+            time = datetime.datetime(*datetime.datetime.now().timetuple()[:3], *time)
         if day is None:
             day = Day.query.all()[-1]
         else:
@@ -377,7 +371,7 @@ class AnonymousUser(AnonymousUserMixin):
     def can(self, permissions):
         return False
 
-    def allowed_to_read(self, user_id):
+    def can_read(self, user_id):
         return False
 
     def is_administrator(self):
