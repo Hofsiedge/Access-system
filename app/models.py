@@ -38,11 +38,11 @@ class TimeInside(db.Model):
         if day is None:
             day = Day.query.all()[-1]
         passings_dict = {u: [] for u in User.query.all()}
-        for passing in Passing.query.filter_by(day=day).all():
+        for passing in Passing.query.filter_by(day=day).order_by(Passing.id).all():
             passings_dict[passing.user].append(passing.time)
         for u in passings_dict.keys():
             passings_dict[u] = sum([passings_dict[u][i+1] - passings_dict[u][i] \
-                                    for i in range(0, len(passings_dict[u]) // 2)],
+                                    for i in range(0, len(passings_dict[u]), 2)],
                                    datetime.timedelta())
         db.session.add_all([TimeInside(user=u, day=day, total_inside=passings_dict[u]) \
                         for u in passings_dict.keys() if passings_dict[u]])
