@@ -4,7 +4,7 @@
 {% block head %}
 {{ super() }}
 <script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
-<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='style.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 {% endblock %}
 
 {% block title %}
@@ -16,17 +16,17 @@
 
 {{ wtf.quick_form(form) }}
 
-<p id="bar">
-
-</p>
+<br>
+<p>Bug in TimeInside computation!</p>
+<br>
 
 <div class="container">
 <table id="history_table" class="table table-bordered table-hover">
     <thead>
     <tr>
         <th></th>
-        {% for day in days %}
-        <th>{{ day.day }}</th>
+        {% for day in meta_list[2] %}
+        <th>{{ day }}</th>
         {% endfor %}
     </tr>
     </thead>
@@ -34,8 +34,10 @@
     {% for user in history %}
     <tr>
         <td>{{ user }}</td>
-        {% for day in history[user] %}
-        <td> {{ day.total_inside }} </td>
+        {% for TI in history[user] %}
+        <td data-toggle="popover" data-html="true" data-container="body">
+            {{ TI.total_inside }}
+        </td>
         {% endfor %}
     </tr>
     {% endfor %}
@@ -45,6 +47,10 @@
 
 <script> // Just a script for AJAX requests
     $(document).ready(function() {
+        $('[data-toggle="popover"]').popover({
+            //Установление направления отображения popover
+            placement : 'top'
+        });
         $('form').submit(function (e) {
             var url = "{{ url_for('main.get_DB') }}"; // send the form data here.
             $.ajax({
@@ -74,11 +80,24 @@
         for (var i = 0, row; row = table.rows[i]; i++) {
             if (row.rowIndex > 0){
                 for (var j = 0, col; col = row.cells[j]; j++) {
-                    if (col.cellIndex > 0){
-                        var temp = col.innerHTML.split(':')
+                    // TODO: check second condition
+                    if ((col.cellIndex > 0) & (typeof(col.innerHTML) != undefined)){
+                        var temp = col.innerHTML.split(':');
                         var a = (255 - Math.floor((parseInt(temp[0]) * 3600 + parseInt(temp[1]) * 60 + parseInt(temp[2])) / 338)).toString(16);
                         if (a.length == 1) a = '0' + a;
                         col.style.backgroundColor = '#' + a + 'ff' + a;
+                        $.ajax({
+                            type: "GET",
+                            url: "http://127.0.0.1:5000" + '/api/v1.0/passings/' + user_list[col.parentNode.rowIndex - 1] + '/' + date_list[col.cellIndex - 1],
+                            headers: {"Authorization": getCookie('auth_token').slice(1, -1)},
+                            success: function (data) {
+                                // TODO: set data-content for tooltips there, at once
+
+                                //sec_data = Object.assign(data)
+                                //console.log(i, j, sec_data, data);
+                                console.log(data)
+                            }
+                        });
                     }
                 }
             }
@@ -92,6 +111,16 @@
         ));
         return matches ? decodeURIComponent(matches[1]) : undefined;
     }
+    Array.prototype.pairs = function () {
+        var pairs = [];
+        for (var i = 0; i < this.length - 1; i = i + 2) {
+            pairs.push(this[i] + ' - ' + this[i + 1]);
+        }
+        if (this.length % 2){
+            pairs.push(this[this.length - 1]);
+        }
+        return pairs;
+    }
 
     var tbl = document.getElementById("history_table");
     var user_list = "{{ meta_list[0] }}".split(", ");
@@ -100,19 +129,28 @@
     function alertRowCell (e) {
         var cell = e.target || window.event.srcElement;
         if ( (cell.cellIndex > 0) & (cell.parentNode.rowIndex > 0) )
-            // alert( user_list[cell.parentNode.rowIndex - 1] + ' : ' +  date_list[cell.cellIndex - 1] );
             $.ajax({
                 type: "GET",
                 url: "http://127.0.0.1:5000" + '/api/v1.0/passings/' + user_list[cell.parentNode.rowIndex - 1] + '/' + date_list[cell.cellIndex - 1],
-                // FIXME
                 headers: {"Authorization": getCookie('auth_token').slice(1, -1)},
                 success: function (data) {
-                    //
-                    // document.getElementById("bar").innerHTML = data.data.message;
-                    console.log(data)
-                    alert(data)
-                    // display the returned data in the console.
-                    //
+                    formatted_data = []
+                    pattern = /(?:\d{1,2}:){2}\d{1,2}/g;
+                    result = []
+                    while (m = pattern.exec(data)){
+                        result.push(m[0])
+                    }
+                    len = Math.round(result.length / 2)
+                    for (var i=0; i < len; i++){
+                       formatted_data.push(result[2 * i] + ' - ' + result[2 * i + 1]); 
+                    }
+                    sec_data = '';
+                    for (var i=0; i<formatted_data.length; i++){
+                        sec_data += formatted_data[i] + '<br>'
+                    }
+                    $(cell).attr("data-html", true);
+                    $(cell).attr("data-content", sec_data);
+                    $(cell).popover("show");
                 }
             });
 

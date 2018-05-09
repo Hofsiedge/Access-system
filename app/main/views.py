@@ -1,6 +1,7 @@
 from flask import render_template, session, redirect, url_for, request, abort, flash, jsonify, make_response, g
 from flask_login import login_required, current_user
 import datetime
+from collections import OrderedDict
 from . import main
 from .forms import EditProfileForm, DBForm, CreatePassingForm, SaveDayForm
 from .. import db
@@ -16,22 +17,32 @@ def index():
 @login_required
 def show_table():
     form = DBForm()
-    history = {}
-    for i in TimeInside.query.all():
+    history = OrderedDict() # {User: [TI's]}
+    days = {}               # {Day.id: Day}
+    for i in TimeInside.query.order_by(TimeInside.user_id).all():
         if i.user in history:
             history[i.user].append(i)
         else:
             history[i.user] = [i]
-    meta_list = [str([i.id for i in history])[1:-1],
-                 ', '.join([str(i.day.id) for i in history[list(history.keys())[0]]])] \
-            if history else []
-    days = [i for i in list(history.values())[0]] if history else []
-    resp = make_response(render_template('show_table.html', form=form, history=history, meta_list=meta_list, days=days))
+        if i.day.id not in days:
+            days[i.day.id] = i.day
+    for i in history.keys():
+        diff = set(days.keys()) - set([x.day.id for x in history[i]])
+        history[i] = sorted(history[i] + [TimeInside(day=Day.query.get(day_id), user=i,
+                                                     total_inside=datetime.timedelta(0)) for day_id in diff],
+                            key=lambda x: repr(x.day)) if history else []
+    meta_list = [str([user.id    for user    in history ])[1:-1],   # ['User.id's', 'Day.id's']
+                 str([day_id     for day_id  in days    ])[1:-1],
+                 list(days.values())]
+    resp = make_response(render_template('show_table.html', form=form, history=history, days=days,
+                                         meta_list=meta_list))
     resp.set_cookie('auth_token', (g.get('token') or ''))
     return resp
-    # TODO: cookies added, need to add requests in show_table authorizing with JS
 
-# TODO: API for serving AJAX requests
+# TODO: in AJAX-handling API add 0-id situation handling
+# date_list: [((day.id or 0), repr(day)) .. ]
+# user_list
+
 @main.route('/table', methods=['POST'])
 @login_required
 def get_DB():
