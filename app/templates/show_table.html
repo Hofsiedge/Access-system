@@ -89,10 +89,6 @@
                             url: "http://127.0.0.1:5000" + '/api/v1.0/passings/' + user_list[col.parentNode.rowIndex - 1] + '/' + date_list[col.cellIndex - 1],
                             headers: {"Authorization": getCookie('auth_token').slice(1, -1)},
                             success: function (data) {
-                                // TODO: set data-content for tooltips there, at once
-
-                                //sec_data = Object.assign(data)
-                                //console.log(i, j, sec_data, data);
                                 console.log(data)
                             }
                         });
@@ -101,6 +97,45 @@
             }
         }
     });
+
+
+var currentElem = null;
+var table = document.getElementById("history_table");
+// показать popover на onmouseover
+table.onmouseover = function(event) {
+    if (currentElem) {
+        return;
+    }
+    var target = event.target;
+    while (target != this) {
+        if (target.tagName == 'TD') break;
+        target = target.parentNode;
+    }
+    if (target == this) return;
+    currentElem = target;
+    if (target.cellIndex > 0) {
+        re = /(\d{1,2}:){2}\d{1,2}/;
+        if (!target.dataset.content & (re.exec(target.innerHTML)[0] !== "0:00:00")){
+            getCellMeta(event);
+        } else {
+            $(target).popover("show");
+        };
+    }
+};
+
+// прятать popover на onmouseout
+table.onmouseout = function(event) {
+    if (!currentElem) return;
+    var relatedTarget = event.relatedTarget;
+    if (relatedTarget) { // может быть relatedTarget = null
+        while (relatedTarget) {
+            if (relatedTarget == currentElem) return;
+            relatedTarget = relatedTarget.parentNode;
+        }
+    }
+    $(currentElem).popover("hide");
+    currentElem = null;
+};
 
     // возвращает cookie с именем name, если есть, если нет, то undefined
     function getCookie(name) {
@@ -124,7 +159,7 @@
     var user_list = "{{ meta_list[0] }}".split(", ");
     var date_list = "{{ meta_list[1] }}".split(", ");
     console.log(user_list, date_list);
-    function alertRowCell (e) {
+    function getCellMeta (e) {
         var cell = e.target || window.event.srcElement;
         if ( (cell.cellIndex > 0) & (cell.parentNode.rowIndex > 0) )
             $.ajax({
@@ -146,7 +181,6 @@
                     for (var i=0; i<formatted_data.length; i++){
                         sec_data += formatted_data[i] + '<br>'
                     }
-                    $(cell).attr("data-html", true);
                     $(cell).attr("data-content", sec_data);
                     $(cell).popover("show");
                 }
@@ -155,9 +189,9 @@
     }
 
     if ( tbl.addEventListener ) {
-        tbl.addEventListener("click", alertRowCell, false);
+        tbl.addEventListener("click", getCellMeta, false);
     } else if ( tbl.attachEvent ) {
-        tbl.attachEvent("onclick", alertRowCell);
+        tbl.attachEvent("onclick", getCellMeta);
     }
 
 </script>
