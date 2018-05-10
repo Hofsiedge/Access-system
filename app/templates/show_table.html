@@ -18,10 +18,6 @@
 
 <br>
 
-<table class="popover-time-table"><tr>{% for i in range(24) %}<th></th>{% endfor %}</tr></table>
-
-<br>
-
 <div class="container">
 <table id="history_table" class="table table-bordered table-hover">
     <thead>
@@ -179,13 +175,14 @@ table.onmouseout = function(event) {
                     }
                     len = Math.round(result.length / 2)
                     for (var i=0; i < len; i++){
-                       formatted_data.push(result[2 * i] + ' - ' + result[2 * i + 1]); 
+                        // console.log(result[2*i].length, Array(10 - result[2*i].length).join(' '))
+                        formatted_data.push('<td>' + result[2 * i] + '</td><td>&nbsp;-&nbsp;</td><td>' + result[2 * i + 1] + '</td>'); 
                     }
-                    sec_data = '';
+                    sec_data = '<table>';
                     for (var i=0; i<formatted_data.length; i++){
-                        sec_data += formatted_data[i] + '<br>'
+                        sec_data += '<tr>' + formatted_data[i] + '</tr>';
                     }
-                    time_table = "<table class='popover-time-table'><tr>{% for i in range(24) %}<th></th>{% endfor %}</tr></table>";
+                    sec_data += '</table>';
                     time_table = "<table class='popover-time-table'><tr>";
                     pattern = /\d{24}/;
                     L = pattern.exec(data)[0];
