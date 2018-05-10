@@ -80,7 +80,13 @@ class User(UserMixin, db.Model):
 
     @staticmethod
     def get_passings(user_id, day_id):
-        return [':'.join(list(map(str, (i.time.hour, i.time.minute, i.time.second)))) for i in User.query.get(user_id).passing.filter_by(day=Day.query.get(day_id)).all()]
+        # TODO: Test if user_id=0 raises exceptions
+        L = User.query.get(user_id).passing.filter_by(day=Day.query.get(day_id)).all()
+        A = [i.time.hour for i in L]
+        B = set(sum([list(range(A[i], A[i+1] + 1))     # set of hours inside (for show_table.html)
+                     for i in range(0, len(A), 2)], []))
+        C = ''.join(['1' if i in B else '0' for i in range(24)])
+        return [':'.join(list(map(str, (i.time.hour, i.time.minute, i.time.second)))) for i in L] + [C]
 
     def generate_confirmation_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)

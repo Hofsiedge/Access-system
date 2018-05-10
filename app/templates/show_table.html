@@ -18,6 +18,10 @@
 
 <br>
 
+<table class="popover-time-table"><tr>{% for i in range(24) %}<th></th>{% endfor %}</tr></table>
+
+<br>
+
 <div class="container">
 <table id="history_table" class="table table-bordered table-hover">
     <thead>
@@ -43,7 +47,7 @@
 </table>
 </div>
 
-<script> // Just a script for AJAX requests
+<script>
     $(document).ready(function() {
         $('[data-toggle="popover"]').popover({
             //Установление направления отображения popover
@@ -169,9 +173,9 @@ table.onmouseout = function(event) {
                 success: function (data) {
                     formatted_data = []
                     pattern = /(?:\d{1,2}:){2}\d{1,2}/g;
-                    result = []
+                    result = [];
                     while (m = pattern.exec(data)){
-                        result.push(m[0])
+                        result.push(m[0]);
                     }
                     len = Math.round(result.length / 2)
                     for (var i=0; i < len; i++){
@@ -181,17 +185,23 @@ table.onmouseout = function(event) {
                     for (var i=0; i<formatted_data.length; i++){
                         sec_data += formatted_data[i] + '<br>'
                     }
+                    time_table = "<table class='popover-time-table'><tr>{% for i in range(24) %}<th></th>{% endfor %}</tr></table>";
+                    time_table = "<table class='popover-time-table'><tr>";
+                    pattern = /\d{24}/;
+                    L = pattern.exec(data)[0];
+                    for (var i=0; i < 24; i++) {
+                        if (L[i] === "1") {
+                            time_table += "<th style='background-color: rgb(0, 0, 0);'></th>";
+                        } else {
+                            time_table += "<th></th>";
+                        }
+                    }
+                    time_table += "</tr></table>";
+                    sec_data += time_table;
                     $(cell).attr("data-content", sec_data);
                     $(cell).popover("show");
                 }
             });
-
-    }
-
-    if ( tbl.addEventListener ) {
-        tbl.addEventListener("click", getCellMeta, false);
-    } else if ( tbl.attachEvent ) {
-        tbl.attachEvent("onclick", getCellMeta);
     }
 
 </script>
